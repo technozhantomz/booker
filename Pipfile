@@ -1,0 +1,35 @@
+[[source]]
+name = "pypi"
+url = "https://pypi.org/simple"
+verify_ssl = true
+
+[dev-packages]
+mypy = "~=0.780"
+pytest = "~=5.4.3"
+pytest-timeout = "~=1.3.4"
+pytest-asyncio = "~=0.12.0"
+pytest-aiohttp = "~=0.3.0"
+pytest-benchmark = "~=3.2.3"
+pytest-cov = "~=2.9.0"
+
+[packages]
+sqlalchemy = {extras = ["postgresql_psycopg2binary"], version = "~=1.3.17"}
+sqlalchemy-utils = {extras = ["anyjson"], version = "~=0.36.6"}
+aiopg = {extras = ["sa"], version = "~=1.0.0"}
+alembic = "~=1.4.2"
+marshmallow = "~=3.6.1"
+marshmallow-dataclass = {extras = ["enum", "union"], version = "~=7.6.0"}
+marshmallow-sqlalchemy = "~=0.23.1"
+marshmallow-jsonschema = "~=0.10.0"
+aiozmq = {extras = ["msgpack"], version = "~=0.9.0"}
+aiohttp = {extras = ["speedups"], version = "~=3.6.2"}
+apispec = "~=3.3.1"
+aiohttp-apispec = "~=2.2.1"
+
+[requires]
+python_version = "3.8"
+
+[scripts]
+typecheck = "mypy --namespace-packages -p booker -p tests"
+serve = "python3 -m booker"
+test = "pytest tests"
