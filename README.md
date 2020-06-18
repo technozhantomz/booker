@@ -1,5 +1,6 @@
 [![License]][LICENSE.md]
 [![Telegram]][Teletram join]
+[![Code style: black]][black code style]
 
 --------------------------------------------------------------------------------
 
@@ -40,5 +41,7 @@ Booker is released under the GNU Affero General Public License v3.0. See
 [CONTRIBUTING.md]: CONTRIBUTING.md
 [Telegram]: https://img.shields.io/badge/Telegram-fincubator-blue?logo=telegram
 [Teletram join]: https://t.me/fincubator
+[Code style: black]: https://img.shields.io/badge/code%20style-black-000000.svg
+[black code style]: https://github.com/psf/black
 [Docker]: https://www.docker.com
 [Docker Compose]: https://www.docker.com
