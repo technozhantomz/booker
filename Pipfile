@@ -31,5 +31,7 @@ python_version = "3.8"
 
 [scripts]
 typecheck = "mypy --namespace-packages -p booker -p tests"
-serve = "python3 -m booker"
+migrate = "alembic upgrade heads"
+migration_revision = "alembic revision --autogenerate"
 test = "pytest tests"
+serve = "python3 -m booker"

@@ -1,8 +1,9 @@
 /.git
 /CLA-*
 /CONTRIBUTING.md
-/docker-compose.yml
+/docker-compose*.yml
 /Dockerfile
 /LICENSE.md
 /README.md
 /.dockerignore
+/.env
