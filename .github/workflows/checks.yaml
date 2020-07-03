@@ -5,7 +5,5 @@ jobs:
     runs-on: [ubuntu-latest]
     steps:
       - uses: actions/checkout@v2
-      - name: Run services
-        run: docker-compose up --build -d
       - name: Run tests
-        run: docker-compose exec -T booker pipenv run test
+        run: docker-compose -f docker-compose-dev-test.yml --env-file .env.example up -V --remove-orphans --exit-code-from backend --build

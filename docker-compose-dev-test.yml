@@ -1,0 +1,26 @@
+version: '2.1'
+services:
+  db:
+    image: postgres:12.3-alpine
+    environment:
+      POSTGRES_USER: '${DB_USER}'
+      POSTGRES_PASSWORD: '${DB_PASSWORD}'
+      POSTGRES_DB: '${DB_DATABASE}'
+    healthcheck:
+      test: pg_isready -U ${DB_USER} -t 10
+      interval: 1s
+      timeout: 10s
+      retries: 100
+  backend:
+    build: .
+    environment:
+      DB_DRIVER: postgres+psycopg2
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USER: '${DB_USER}'
+      DB_PASSWORD: '${DB_PASSWORD}'
+      DB_DATABASE: '${DB_DATABASE}'
+    command: sh -c 'pipenv run typecheck; pipenv run test'
+    depends_on:
+      db:
+        condition: service_healthy
