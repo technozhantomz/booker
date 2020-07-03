@@ -53,11 +53,12 @@ COPY --from=builder /root /root
 
 COPY --from=builder /booker/Pipfile.lock .
 
-COPY --from=bytecompile /booker/booker/*.py /booker/booker/*.pyc booker/
-COPY --from=bytecompile /booker/tests/*.py /booker/tests/*.pyc tests/
+COPY alembic.ini .
+COPY --from=bytecompile /booker/booker booker
+COPY --from=bytecompile /booker/tests tests
 
 COPY conftest.py .
 
 COPY Pipfile .
 
-CMD (MYPYPATH=. pipenv run typecheck); pipenv run test; pipenv run serve
+CMD pipenv run migrate && pipenv run serve

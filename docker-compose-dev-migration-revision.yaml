@@ -20,13 +20,9 @@ services:
       DB_USER: '${DB_USER}'
       DB_PASSWORD: '${DB_PASSWORD}'
       DB_DATABASE: '${DB_DATABASE}'
-    command: sh -c 'pipenv run migrate && pipenv run serve'
+    command: sh -c 'pipenv run migrate && pipenv run migration_revision'
     volumes:
-      - db_data:/var/lib/postgresql/data
-    ports:
-      - 8081:8080
+      - ./booker/migrations/versions:/booker/booker/migrations/versions
     depends_on:
       db:
         condition: service_healthy
-volumes:
-  db_data:
