@@ -2,6 +2,7 @@ import pytest
 
 import asyncio
 from uuid import uuid4
+from decimal import Decimal
 import logging
 
 import zmq
@@ -28,7 +29,7 @@ new_order = Order(
     in_tx_from='',
     in_tx_to='',
     in_tx_hash='',
-    in_tx_amount=Amount('50'),
+    in_tx_amount=Decimal('50'),
     in_tx_created_at=0,
     in_tx_status=TxStatus.WAIT,
     in_tx_error=TxError.NO_ERROR,
@@ -37,7 +38,7 @@ new_order = Order(
     out_tx_from='finteh-usdt',
     out_tx_to='kwaskoff',
     out_tx_hash='',
-    out_tx_amount=Amount('49.5'),
+    out_tx_amount=Decimal('49.5'),
     out_tx_created_at=0,
     out_tx_status=TxStatus.WAIT,
     out_tx_error=TxError.NO_ERROR,
