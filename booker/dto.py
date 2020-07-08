@@ -1,4 +1,6 @@
+from __future__ import annotations
 from typing import ClassVar, Type
+import dataclasses
 from decimal import Decimal
 
 import marshmallow
@@ -14,6 +16,14 @@ class DTOInvalidType(Exception):
 @dataclass
 class DataTransferClass:
     Schema: ClassVar[Type[MarshmallowSchema]] = MarshmallowSchema
+
+
+    def update(self, dto: DataTransferClass) -> None:
+        dto_dict = dataclasses.asdict(dto)
+
+        for key, value in dto_dict.items():
+            if value is not None:
+                setattr(self, key, value)
 
 
 def AmountField(*args, **kwargs):

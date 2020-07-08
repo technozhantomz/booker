@@ -61,4 +61,9 @@ COPY conftest.py .
 
 COPY Pipfile .
 
+ARG HTTP_PORT
+ENV HTTP_PORT="${HTTP_PORT}"
+
+EXPOSE "${HTTP_PORT}/tcp"
+
 CMD pipenv run migrate && pipenv run serve

@@ -1,3 +1,8 @@
-from booker.server import main
+import asyncio
+import logging
 
-main()
+from booker.tasks import tasks_loop
+
+
+logging.basicConfig(level=logging.DEBUG)
+asyncio.run(tasks_loop())
