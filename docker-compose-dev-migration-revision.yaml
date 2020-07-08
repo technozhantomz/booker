@@ -12,8 +12,13 @@ services:
       timeout: 10s
       retries: 100
   backend:
-    build: .
+    build:
+        context: .
+        args:
+          HTTP_PORT: '${HTTP_PORT}'
     environment:
+      HTTP_HOST: '${HTTP_HOST}'
+      HTTP_PORT: '${HTTP_PORT}'
       DB_DRIVER: postgres+psycopg2
       DB_HOST: db
       DB_PORT: 5432
