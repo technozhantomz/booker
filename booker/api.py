@@ -234,8 +234,15 @@ class APIServer(ABC):
 
 
 class APIsServer:
-    apis: Mapping[str, APIServer] = dict()
-    coroutines: Mapping[UUID, APIStream] = dict()
+    apis: Mapping[str, APIServer]
+    coroutines: Mapping[UUID, APIStream]
+
+
+    def __init__(self) -> None:
+        super().__init__()
+
+        self.apis = {}
+        self.coroutines = {}
 
 
     def api_register(self, api: APIServer) -> None:
