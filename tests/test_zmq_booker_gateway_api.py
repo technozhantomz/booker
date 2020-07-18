@@ -1056,6 +1056,7 @@ class MockBTSGatewayBookerOrderAPIServer(GatewayBookerOrderAPIServer):
                 raise ValueError('Unknown order request type')
 
 
+@pytest.mark.timeout(60)
 async def test_new_order() -> None:
     server_stream = await create_zmq_stream(
         zmq.REP,
