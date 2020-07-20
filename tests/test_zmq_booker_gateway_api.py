@@ -1056,6 +1056,7 @@ class MockBTSGatewayBookerOrderAPIServer(GatewayBookerOrderAPIServer):
                 raise ValueError('Unknown order request type')
 
 
+@pytest.mark.timeout(60)
 async def test_new_order() -> None:
     server_stream = await create_zmq_stream(
         zmq.REP,
@@ -1072,14 +1073,19 @@ async def test_new_order() -> None:
 
     address = list(server_stream.transport.bindings())[0]
 
-    booker_client_stream = await create_zmq_stream(zmq.REQ, connect=address)
-    booker_apis_client = ZMQJSONRPCAPIsClient(stream=booker_client_stream)
-    booker_client = MockBookerGatewayOrderAPIClient(
-        apis_client=booker_apis_client
+    eth_booker_client_zmq_stream = await create_zmq_stream(
+        zmq.REQ,
+        connect=address
     )
-
+    eth_booker_apis_client = ZMQJSONRPCAPIsClient(
+        stream=eth_booker_client_zmq_stream
+    )
+    eth_booker_client = MockBookerGatewayOrderAPIClient(
+        apis_client=eth_booker_apis_client
+    )
     eth_server = MockETHGatewayBookerOrderAPIServer(
-        booker=booker_client, order_requests=asyncio.Queue()
+        booker=eth_booker_client,
+        order_requests=asyncio.Queue()
     )
     eth_server_process_orders_task = asyncio.create_task(
         eth_server.process_orders()
@@ -1087,14 +1093,25 @@ async def test_new_order() -> None:
 
     apis_server.api_register(eth_server)
 
-    eth_client_stream = await create_zmq_stream(zmq.REQ, connect=address)
-    eth_apis_client = ZMQJSONRPCAPIsClient(stream=eth_client_stream)
+    eth_client_zmq_stream = await create_zmq_stream(zmq.REQ, connect=address)
+    eth_apis_client = ZMQJSONRPCAPIsClient(stream=eth_client_zmq_stream)
     eth_gateway_client = MockETHGatewayBookerOrderAPIClient(
         apis_client=eth_apis_client
     )
 
+    bts_booker_client_zmq_stream = await create_zmq_stream(
+        zmq.REQ,
+        connect=address
+    )
+    bts_booker_apis_client = ZMQJSONRPCAPIsClient(
+        stream=bts_booker_client_zmq_stream
+    )
+    bts_booker_client = MockBookerGatewayOrderAPIClient(
+        apis_client=bts_booker_apis_client
+    )
     bts_server = MockBTSGatewayBookerOrderAPIServer(
-        booker=booker_client, order_requests=asyncio.Queue()
+        booker=bts_booker_client,
+        order_requests=asyncio.Queue()
     )
     bts_server_process_orders_task = asyncio.create_task(
         bts_server.process_orders()
@@ -1102,8 +1119,8 @@ async def test_new_order() -> None:
 
     apis_server.api_register(bts_server)
 
-    bts_client_stream = await create_zmq_stream(zmq.REQ, connect=address)
-    bts_apis_client = ZMQJSONRPCAPIsClient(stream=bts_client_stream)
+    bts_client_zmq_stream = await create_zmq_stream(zmq.REQ, connect=address)
+    bts_apis_client = ZMQJSONRPCAPIsClient(stream=bts_client_zmq_stream)
     bts_gateway_client = MockBTSGatewayBookerOrderAPIClient(
         apis_client=bts_apis_client
     )
