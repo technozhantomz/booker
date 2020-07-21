@@ -1,4 +1,4 @@
-from typing import List, Generator
+from typing import AbstractSet, Awaitable
 import asyncio
 import logging
 
@@ -27,27 +27,24 @@ class WSJSONRPCAPIsClient(JSONRPCAPIsClient):
 
 
 class WSJSONRPCAPIsServer(JSONRPCAPIsServer):
-    streams: List[asyncio.Task]
-    new_streams: List[asyncio.Task]
+    tasks: AbstractSet[Awaitable[None]]
     new_stream: asyncio.Event
 
 
     def __init__(self) -> None:
         super().__init__()
 
-        self.streams = []
-        self.new_streams = []
+        self.tasks = {*()}
         self.new_stream = asyncio.Event()
     
 
-    def add_stream(self, stream: WebSocketResponse) -> asyncio.Task:
-        stream_poller = self.poll_stream(stream)
-        stream_poller_task = asyncio.create_task(stream_poller)
+    def add_stream(self, stream: WebSocketResponse) -> Awaitable[None]:
+        stream_poller = asyncio.create_task(self.poll_stream(stream))
+        self.tasks |= {stream_poller}
 
-        self.new_streams.append(stream_poller_task.__await__())
         self.new_stream.set()
 
-        return stream_poller_task
+        return stream_poller
 
 
     async def poll_stream(self, ws: WebSocketResponse) -> None:
@@ -74,50 +71,23 @@ class WSJSONRPCAPIsServer(JSONRPCAPIsServer):
                 raise exception
 
 
-    def __await__(self) -> Generator[None, None, None]:
-        while True:
-            streams = list(enumerate(self.streams)).reverse()
-
-            if not streams and not self.new_streams:
-                wait = self.new_stream.wait().__await__()
-
-                while True:
-                    try:
-                        next = wait.send(None)
-                    except (StopIteration, asyncio.CancelledError):
-                        break
-
-                    yield next
-
-            self.new_stream.clear()
-            self.streams.extend(self.new_streams)
-            self.new_streams = []
-
-            for number, stream in streams:
-                try:
-                    next = stream.send(None)
-                except (StopIteration, asyncio.CancelledError):
-                    self.streams.pop(number)
-
-                    yield None
-
-                    continue
-
-                try:
-                    yield next
-                except asyncio.CancelledError as exception:
-                    streams = list(enumerate(self.streams)).reverse()
-
-                    for number, stream in streams:
-                        try:
-                            stream.throw(exception)
-                        except (StopIteration, asyncio.CancelledError):
-                            self.streams.pop(number)
-
-                            yield None
-
-                    raise
-
-
     async def poll(self) -> None:
-        return await self
+        self.new_task.clear()
+
+        new_stream = self.new_stream.wait()
+        self.tasks |= {asyncio.create_task(new_stream)}
+
+        while True:
+            tasks, self.tasks = self.tasks, {*()}
+            done, pending = await asyncio.wait(
+                tasks,
+                return_when=asyncio.FIRST_COMPLETED
+            )
+
+            self.tasks |= pending
+
+            if new_stream in done:
+                self.new_task.clear()
+
+                new_stream = self.new_task.wait()
+                self.tasks |= {asyncio.create_task(new_stream)}
