@@ -7,16 +7,15 @@ from decimal import Decimal
 from copy import deepcopy
 
 from marshmallow_dataclass import dataclass
-from aiohttp import web
+from aiohttp import ClientWebSocketResponse, web
 from aiohttp.web import Application, Request, WebSocketResponse
 from aiohttp.test_utils import TestClient, TestServer
 
 from booker.dto import DataTransferClass, Amount
-from booker.api import APIStream, api_method, api_client, api_server
-from booker.ws_jsonrpc_api import WSJSONRPCAPIsClient, WSJSONRPCAPIsServer
-from booker.booker_gateway_api import (
+from booker.rpc.api import APIStream, api_method, api_client, api_server
+from booker.rpc.ws_jsonrpc_api import WSJSONRPCAPIsClient, WSJSONRPCAPIsServer
+from booker.gateway.dto import (
     OrderType,
-    TxStatus,
     TxError,
     ValidateAddress,
     ValidatedAddress,
@@ -24,13 +23,12 @@ from booker.booker_gateway_api import (
     DepositAddress,
     NewInOrder,
     NewOutOrder,
+    NewInOrderRequest,
     NewInTxOrder,
     NewOutTxOrder,
     UpdateTxOrder,
-    NewInTx,
-    NewOutTx,
-    UpdateTx,
-    BindTxOrder,
+)
+from booker.rpc.gateway.api import (
     AbstractBookerGatewayOrderAPI,
     AbstractBookerGatewayOrderAPIServer,
     AbstractGatewayBookerOrderAPI,
@@ -47,9 +45,9 @@ class Tx(DataTransferClass):
     tx_to: Optional[str] = None
     tx_amount: Optional[Amount] = None
     tx_created_at: Optional[int] = None
-    tx_status: TxStatus = TxStatus.WAIT
     tx_error: TxError = TxError.NO_ERROR
     tx_confirmations: int = 0
+    tx_max_confirmations: int = 0
     memo_to: Optional[str] = None
 
 
@@ -85,8 +83,8 @@ eth_in_tx_0.tx_from = '0xE05c4f7d6e1c774E42B0ca6C833d008467fd361A'
 eth_in_tx_0.tx_hash = '0xcb164a9f2a66d2f8c564cd5eaaed5a3415cd87af03abcc8278a183eeaceaf38f'
 eth_in_tx_0.tx_amount = Decimal('50')
 eth_in_tx_0.tx_created_at = 1594394720
-eth_in_tx_0.tx_status = TxStatus.RECEIVED_NOT_CONFIRMED
 eth_in_tx_0.tx_confirmations += 1
+eth_in_tx_0.tx_max_confirmations = 3
 
 
 new_eth_in_tx_order = NewInTxOrder(
@@ -95,9 +93,9 @@ new_eth_in_tx_order = NewInTxOrder(
     tx_from=eth_in_tx_0.tx_from,
     tx_amount=eth_in_tx_0.tx_amount,
     tx_created_at=eth_in_tx_0.tx_created_at,
-    tx_status=eth_in_tx_0.tx_status,
     tx_error=eth_in_tx_0.tx_error,
-    tx_confirmations=eth_in_tx_0.tx_confirmations
+    tx_confirmations=eth_in_tx_0.tx_confirmations,
+    tx_max_confirmations=eth_in_tx_0.tx_max_confirmations
 )
 
 
@@ -107,22 +105,21 @@ eth_in_tx_1.tx_confirmations += 1
 
 update_eth_in_tx_order_0 = UpdateTxOrder(
     order_id=new_deposit_in_order.order_id,
-    tx_status=eth_in_tx_1.tx_status,
     tx_error=eth_in_tx_1.tx_error,
-    tx_confirmations=eth_in_tx_1.tx_confirmations
+    tx_confirmations=eth_in_tx_1.tx_confirmations,
+    tx_max_confirmations=eth_in_tx_1.tx_max_confirmations
 )
 
 
 eth_in_tx_2 = deepcopy(eth_in_tx_1)
-eth_in_tx_2.tx_status = TxStatus.RECEIVED_AND_CONFIRMED
 eth_in_tx_2.tx_confirmations += 1
 
 
 update_eth_in_tx_order_1 = UpdateTxOrder(
     order_id=new_deposit_in_order.order_id,
-    tx_status=eth_in_tx_2.tx_status,
     tx_error=eth_in_tx_2.tx_error,
-    tx_confirmations=eth_in_tx_2.tx_confirmations
+    tx_confirmations=eth_in_tx_2.tx_confirmations,
+    tx_max_confirmations=eth_in_tx_2.tx_max_confirmations
 )
 
 
@@ -135,9 +132,9 @@ new_deposit_out_order = NewOutOrder(
     in_tx_to=new_deposit_in_order.in_tx_to,
     in_tx_amount=eth_in_tx_2.tx_amount,
     in_tx_created_at=eth_in_tx_2.tx_created_at,
-    in_tx_status=eth_in_tx_2.tx_status,
     in_tx_error=eth_in_tx_2.tx_error,
     in_tx_confirmations=eth_in_tx_2.tx_confirmations,
+    in_tx_max_confirmations=eth_in_tx_2.tx_max_confirmations,
     out_tx_coin=new_deposit_in_order.out_tx_coin,
     out_tx_to=new_deposit_in_order.out_tx_to
 )
@@ -155,8 +152,8 @@ bts_out_tx_0.tx_from = 'finteh-usdt'
 bts_out_tx_0.tx_hash = '738bc2bd32e2da31f587d281aa7ee9bd02b9daf0:0'
 bts_out_tx_0.tx_amount = Decimal('50')
 bts_out_tx_0.tx_created_at = 1594394731
-bts_out_tx_0.tx_status = TxStatus.RECEIVED_NOT_CONFIRMED
 bts_out_tx_0.tx_confirmations += 1
+bts_out_tx_0.tx_max_confirmations = 3
 
 
 new_bts_out_tx_order = NewOutTxOrder(
@@ -165,9 +162,9 @@ new_bts_out_tx_order = NewOutTxOrder(
     tx_from=bts_out_tx_0.tx_from,
     tx_amount=bts_out_tx_0.tx_amount,
     tx_created_at=bts_out_tx_0.tx_created_at,
-    tx_status=bts_out_tx_0.tx_status,
     tx_error=bts_out_tx_0.tx_error,
-    tx_confirmations=bts_out_tx_0.tx_confirmations
+    tx_confirmations=bts_out_tx_0.tx_confirmations,
+    tx_max_confirmations=bts_out_tx_0.tx_max_confirmations
 )
 
 
@@ -177,22 +174,21 @@ bts_out_tx_1.tx_confirmations += 1
 
 update_bts_out_tx_order_0 = UpdateTxOrder(
     order_id=new_deposit_out_order.order_id,
-    tx_status=bts_out_tx_1.tx_status,
     tx_error=bts_out_tx_1.tx_error,
-    tx_confirmations=bts_out_tx_1.tx_confirmations
+    tx_confirmations=bts_out_tx_1.tx_confirmations,
+    tx_max_confirmations=bts_out_tx_1.tx_max_confirmations
 )
 
 
 bts_out_tx_2 = deepcopy(bts_out_tx_1)
-bts_out_tx_2.tx_status = TxStatus.RECEIVED_AND_CONFIRMED
 bts_out_tx_2.tx_confirmations += 1
 
 
 update_bts_out_tx_order_1 = UpdateTxOrder(
     order_id=new_deposit_out_order.order_id,
-    tx_status=bts_out_tx_2.tx_status,
     tx_error=bts_out_tx_2.tx_error,
-    tx_confirmations=bts_out_tx_2.tx_confirmations
+    tx_confirmations=bts_out_tx_2.tx_confirmations,
+    tx_max_confirmations=bts_out_tx_2.tx_max_confirmations
 )
 
 
@@ -219,8 +215,8 @@ bts_in_tx_0.tx_from = 'kwaskoff'
 bts_in_tx_0.tx_hash = '438bc2bd32e2da76f437d281aa7af9bd02b37af0:0'
 bts_in_tx_0.tx_amount = Decimal('50')
 bts_in_tx_0.tx_created_at = 1594403342
-bts_in_tx_0.tx_status = TxStatus.RECEIVED_NOT_CONFIRMED
 bts_in_tx_0.tx_confirmations += 1
+bts_in_tx_0.tx_max_confirmations = 3
 bts_in_tx_0.memo_to = '0x2d6F329Da0e983288E57DBca1e496dd60fae5437'
 
 
@@ -230,9 +226,9 @@ new_bts_in_tx_order = NewInTxOrder(
     tx_from=bts_in_tx_0.tx_from,
     tx_amount=bts_in_tx_0.tx_amount,
     tx_created_at=bts_in_tx_0.tx_created_at,
-    tx_status=bts_in_tx_0.tx_status,
     tx_error=bts_in_tx_0.tx_error,
     tx_confirmations=bts_in_tx_0.tx_confirmations,
+    tx_max_confirmations=bts_in_tx_0.tx_max_confirmations,
     memo_to=bts_in_tx_0.memo_to
 )
 
@@ -243,22 +239,21 @@ bts_in_tx_1.tx_confirmations += 1
 
 update_bts_in_tx_order_0 = UpdateTxOrder(
     order_id=new_withdrawal_in_order.order_id,
-    tx_status=bts_in_tx_1.tx_status,
     tx_error=bts_in_tx_1.tx_error,
-    tx_confirmations=bts_in_tx_1.tx_confirmations
+    tx_confirmations=bts_in_tx_1.tx_confirmations,
+    tx_max_confirmations=bts_in_tx_1.tx_max_confirmations
 )
 
 
 bts_in_tx_2 = deepcopy(bts_in_tx_1)
-bts_in_tx_2.tx_status = TxStatus.RECEIVED_AND_CONFIRMED
 bts_in_tx_2.tx_confirmations += 1
 
 
 update_bts_in_tx_order_1 = UpdateTxOrder(
     order_id=new_withdrawal_in_order.order_id,
-    tx_status=bts_in_tx_2.tx_status,
     tx_error=bts_in_tx_2.tx_error,
-    tx_confirmations=bts_in_tx_2.tx_confirmations
+    tx_confirmations=bts_in_tx_2.tx_confirmations,
+    tx_max_confirmations=bts_in_tx_2.tx_max_confirmations
 )
 
 
@@ -271,9 +266,9 @@ new_withdrawal_out_order = NewOutOrder(
     in_tx_to=new_withdrawal_in_order.in_tx_to,
     in_tx_amount=bts_in_tx_2.tx_amount,
     in_tx_created_at=bts_in_tx_2.tx_created_at,
-    in_tx_status=bts_in_tx_2.tx_status,
     in_tx_error=bts_in_tx_2.tx_error,
     in_tx_confirmations=bts_in_tx_2.tx_confirmations,
+    in_tx_max_confirmations=bts_in_tx_2.tx_max_confirmations,
     out_tx_coin=new_withdrawal_in_order.out_tx_coin,
     out_tx_to=new_bts_in_tx_order.memo_to
 )
@@ -291,8 +286,8 @@ eth_out_tx_0.tx_from = '0xb6f121Df61ae04D8cb3978BE035C004b24B44283'
 eth_out_tx_0.tx_hash = '0x684c875217a5a68406aba4cc710f57348c1afe9b27fb244675f987d5e337e019'
 eth_out_tx_0.tx_amount = Decimal('50')
 eth_out_tx_0.tx_created_at = 1594403353
-eth_out_tx_0.tx_status = TxStatus.RECEIVED_NOT_CONFIRMED
 eth_out_tx_0.tx_confirmations += 1
+eth_out_tx_0.tx_max_confirmations = 3
 
 
 new_eth_out_tx_order = NewOutTxOrder(
@@ -301,9 +296,9 @@ new_eth_out_tx_order = NewOutTxOrder(
     tx_from=eth_out_tx_0.tx_from,
     tx_amount=eth_out_tx_0.tx_amount,
     tx_created_at=eth_out_tx_0.tx_created_at,
-    tx_status=eth_out_tx_0.tx_status,
     tx_error=eth_out_tx_0.tx_error,
-    tx_confirmations=eth_out_tx_0.tx_confirmations
+    tx_confirmations=eth_out_tx_0.tx_confirmations,
+    tx_max_confirmations=eth_out_tx_0.tx_max_confirmations
 )
 
 
@@ -313,22 +308,21 @@ eth_out_tx_1.tx_confirmations += 1
 
 update_eth_out_tx_order_0 = UpdateTxOrder(
     order_id=new_withdrawal_out_order.order_id,
-    tx_status=eth_out_tx_1.tx_status,
     tx_error=eth_out_tx_1.tx_error,
-    tx_confirmations=eth_out_tx_1.tx_confirmations
+    tx_confirmations=eth_out_tx_1.tx_confirmations,
+    tx_max_confirmations=eth_out_tx_1.tx_max_confirmations
 )
 
 
 eth_out_tx_2 = deepcopy(eth_out_tx_1)
-eth_out_tx_2.tx_status = TxStatus.RECEIVED_AND_CONFIRMED
 eth_out_tx_2.tx_confirmations += 1
 
 
 update_eth_out_tx_order_1 = UpdateTxOrder(
     order_id=new_withdrawal_out_order.order_id,
-    tx_status=eth_out_tx_2.tx_status,
     tx_error=eth_out_tx_2.tx_error,
-    tx_confirmations=eth_out_tx_2.tx_confirmations
+    tx_confirmations=eth_out_tx_2.tx_confirmations,
+    tx_max_confirmations=eth_out_tx_2.tx_max_confirmations
 )
 
 
@@ -355,6 +349,14 @@ class MockBookerGatewayOrderAPIServer(AbstractBookerGatewayOrderAPIServer):
         super().__init__()
 
         self.booker = booker
+
+
+    @api_method
+    async def new_in_order_request(
+        self,
+        args: NewInOrderRequest
+    ) -> APIStream[None, None]:
+        yield None
 
 
     @api_method
@@ -386,31 +388,6 @@ class MockBookerGatewayOrderAPIServer(AbstractBookerGatewayOrderAPIServer):
         self,
         args: UpdateTxOrder
     ) -> APIStream[None, None]:
-        yield None
-
-
-    @api_method
-    async def new_in_tx(self, args: NewInTx) -> APIStream[None, None]:
-        yield None
-
-
-    @api_method
-    async def update_in_tx(self, args: UpdateTx) -> APIStream[None, None]:
-        yield None
-
-
-    @api_method
-    async def new_out_tx(self, args: NewOutTx) -> APIStream[None, None]:
-        yield None
-
-
-    @api_method
-    async def update_out_tx(self, args: UpdateTx) -> APIStream[None, None]:
-        yield None
-
-
-    @api_method
-    async def bind_tx_order(self, args: BindTxOrder) -> APIStream[None, None]:
         yield None
 
 
@@ -519,9 +496,9 @@ class MockETHGatewayBookerOrderAPIServer(GatewayBookerOrderAPIServer):
             tx_to=order.in_tx_to,
             tx_amount=order.in_tx_amount,
             tx_created_at=order.in_tx_created_at,
-            tx_status=order.in_tx_status,
             tx_error=order.in_tx_error,
             tx_confirmations=order.in_tx_confirmations,
+            tx_max_confirmations=order.in_tx_max_confirmations,
             memo_to=order.out_tx_to
         )
 
@@ -560,8 +537,8 @@ class MockETHGatewayBookerOrderAPIServer(GatewayBookerOrderAPIServer):
             tx_0.tx_hash = '0xcb164a9f2a66d2f8c564cd5eaaed5a3415cd87af03abcc8278a183eeaceaf38f'
             tx_0.tx_amount = Decimal('50')
             tx_0.tx_created_at = 1594394720
-            tx_0.tx_status = TxStatus.RECEIVED_NOT_CONFIRMED
             tx_0.tx_confirmations += 1
+            tx_0.tx_max_confirmations = 3
 
             assert tx_0 == eth_in_tx_0
 
@@ -573,9 +550,9 @@ class MockETHGatewayBookerOrderAPIServer(GatewayBookerOrderAPIServer):
                 tx_from=tx_0.tx_from,
                 tx_amount=tx_0.tx_amount,
                 tx_created_at=tx_0.tx_created_at,
-                tx_status=tx_0.tx_status,
                 tx_error=tx_0.tx_error,
-                tx_confirmations=tx_0.tx_confirmations
+                tx_confirmations=tx_0.tx_confirmations,
+                tx_max_confirmations=tx_0.tx_max_confirmations
             )
 
             assert tx_order == new_eth_in_tx_order
@@ -596,9 +573,9 @@ class MockETHGatewayBookerOrderAPIServer(GatewayBookerOrderAPIServer):
             self.orders[in_order_id].in_tx = tx_1
             tx_order = UpdateTxOrder(
                 order_id=in_order_id,
-                tx_status=tx_1.tx_status,
                 tx_error=tx_1.tx_error,
-                tx_confirmations=tx_1.tx_confirmations
+                tx_confirmations=tx_1.tx_confirmations,
+                tx_max_confirmations=tx_1.tx_max_confirmations
             )
 
             assert tx_order == update_eth_in_tx_order_0
@@ -611,7 +588,6 @@ class MockETHGatewayBookerOrderAPIServer(GatewayBookerOrderAPIServer):
                 await update_tx_order.asend(None)
         elif self.step == 2:
             tx_2 = deepcopy(self.txs[in_tx_id])
-            tx_2.tx_status = TxStatus.RECEIVED_AND_CONFIRMED
             tx_2.tx_confirmations += 1
 
             assert tx_2 == eth_in_tx_2
@@ -620,9 +596,9 @@ class MockETHGatewayBookerOrderAPIServer(GatewayBookerOrderAPIServer):
             self.orders[in_order_id].in_tx = tx_2
             tx_order = UpdateTxOrder(
                 order_id=in_order_id,
-                tx_status=tx_2.tx_status,
                 tx_error=tx_2.tx_error,
-                tx_confirmations=tx_2.tx_confirmations
+                tx_confirmations=tx_2.tx_confirmations,
+                tx_max_confirmations=tx_2.tx_max_confirmations
             )
 
             assert tx_order == update_eth_in_tx_order_1
@@ -639,8 +615,8 @@ class MockETHGatewayBookerOrderAPIServer(GatewayBookerOrderAPIServer):
             tx_0.tx_hash = '0x684c875217a5a68406aba4cc710f57348c1afe9b27fb244675f987d5e337e019'
             tx_0.tx_amount = Decimal('50')
             tx_0.tx_created_at = 1594403353
-            tx_0.tx_status = TxStatus.RECEIVED_NOT_CONFIRMED
             tx_0.tx_confirmations += 1
+            tx_0.tx_max_confirmations = 3
 
             assert tx_0 == eth_out_tx_0
 
@@ -652,9 +628,9 @@ class MockETHGatewayBookerOrderAPIServer(GatewayBookerOrderAPIServer):
                 tx_from=tx_0.tx_from,
                 tx_amount=tx_0.tx_amount,
                 tx_created_at=tx_0.tx_created_at,
-                tx_status=tx_0.tx_status,
                 tx_error=tx_0.tx_error,
-                tx_confirmations=tx_0.tx_confirmations
+                tx_confirmations=tx_0.tx_confirmations,
+                tx_max_confirmations=tx_0.tx_max_confirmations
             )
 
             assert tx_order == new_eth_out_tx_order
@@ -675,9 +651,9 @@ class MockETHGatewayBookerOrderAPIServer(GatewayBookerOrderAPIServer):
             self.orders[out_order_id].out_tx = tx_1
             tx_order = UpdateTxOrder(
                 order_id=out_order_id,
-                tx_status=tx_1.tx_status,
                 tx_error=tx_1.tx_error,
-                tx_confirmations=tx_1.tx_confirmations
+                tx_confirmations=tx_1.tx_confirmations,
+                tx_max_confirmations=tx_1.tx_max_confirmations
             )
 
             assert tx_order == update_eth_out_tx_order_0
@@ -690,7 +666,6 @@ class MockETHGatewayBookerOrderAPIServer(GatewayBookerOrderAPIServer):
                 await update_tx_order.asend(None)
         elif self.step == 5:
             tx_2 = deepcopy(self.txs[out_tx_id])
-            tx_2.tx_status = TxStatus.RECEIVED_AND_CONFIRMED
             tx_2.tx_confirmations += 1
 
             assert tx_2 == eth_out_tx_2
@@ -699,9 +674,9 @@ class MockETHGatewayBookerOrderAPIServer(GatewayBookerOrderAPIServer):
             self.orders[out_order_id].out_tx = tx_2
             tx_order = UpdateTxOrder(
                 order_id=out_order_id,
-                tx_status=tx_2.tx_status,
                 tx_error=tx_2.tx_error,
-                tx_confirmations=tx_2.tx_confirmations
+                tx_confirmations=tx_2.tx_confirmations,
+                tx_max_confirmations=tx_2.tx_max_confirmations
             )
 
             assert tx_order == update_eth_out_tx_order_1
@@ -837,9 +812,9 @@ class MockBTSGatewayBookerOrderAPIServer(GatewayBookerOrderAPIServer):
             tx_to=order.in_tx_to,
             tx_amount=order.in_tx_amount,
             tx_created_at=order.in_tx_created_at,
-            tx_status=order.in_tx_status,
             tx_error=order.in_tx_error,
-            tx_confirmations=order.in_tx_confirmations
+            tx_confirmations=order.in_tx_confirmations,
+            tx_max_confirmations=order.in_tx_max_confirmations
         )
 
         assert eth_in_tx == eth_in_tx_2
@@ -877,8 +852,8 @@ class MockBTSGatewayBookerOrderAPIServer(GatewayBookerOrderAPIServer):
             tx_0.tx_hash = '738bc2bd32e2da31f587d281aa7ee9bd02b9daf0:0'
             tx_0.tx_amount = Decimal('50')
             tx_0.tx_created_at = 1594394731
-            tx_0.tx_status = TxStatus.RECEIVED_NOT_CONFIRMED
             tx_0.tx_confirmations += 1
+            tx_0.tx_max_confirmations = 3
 
             assert tx_0 == bts_out_tx_0
 
@@ -890,9 +865,9 @@ class MockBTSGatewayBookerOrderAPIServer(GatewayBookerOrderAPIServer):
                 tx_from=tx_0.tx_from,
                 tx_amount=tx_0.tx_amount,
                 tx_created_at=tx_0.tx_created_at,
-                tx_status=tx_0.tx_status,
                 tx_error=tx_0.tx_error,
-                tx_confirmations=tx_0.tx_confirmations
+                tx_confirmations=tx_0.tx_confirmations,
+                tx_max_confirmations=tx_0.tx_max_confirmations
             )
 
             assert tx_order == new_bts_out_tx_order
@@ -913,9 +888,9 @@ class MockBTSGatewayBookerOrderAPIServer(GatewayBookerOrderAPIServer):
             self.orders[out_order_id].out_tx = tx_1
             tx_order = UpdateTxOrder(
                 order_id=out_order_id,
-                tx_status=tx_1.tx_status,
                 tx_error=tx_1.tx_error,
-                tx_confirmations=tx_1.tx_confirmations
+                tx_confirmations=tx_1.tx_confirmations,
+                tx_max_confirmations=tx_1.tx_max_confirmations
             )
 
             assert tx_order == update_bts_out_tx_order_0
@@ -928,7 +903,6 @@ class MockBTSGatewayBookerOrderAPIServer(GatewayBookerOrderAPIServer):
                 await update_tx_order.asend(None)
         elif self.step == 2:
             tx_2 = deepcopy(self.txs[out_tx_id])
-            tx_2.tx_status = TxStatus.RECEIVED_AND_CONFIRMED
             tx_2.tx_confirmations += 1
 
             assert tx_2 == bts_out_tx_2
@@ -937,9 +911,9 @@ class MockBTSGatewayBookerOrderAPIServer(GatewayBookerOrderAPIServer):
             self.orders[out_order_id].out_tx = tx_2
             tx_order = UpdateTxOrder(
                 order_id=out_order_id,
-                tx_status=tx_2.tx_status,
                 tx_error=tx_2.tx_error,
-                tx_confirmations=tx_2.tx_confirmations
+                tx_confirmations=tx_2.tx_confirmations,
+                tx_max_confirmations=tx_2.tx_max_confirmations
             )
 
             assert tx_order == update_bts_out_tx_order_1
@@ -956,8 +930,8 @@ class MockBTSGatewayBookerOrderAPIServer(GatewayBookerOrderAPIServer):
             tx_0.tx_hash = '438bc2bd32e2da76f437d281aa7af9bd02b37af0:0'
             tx_0.tx_amount = Decimal('50')
             tx_0.tx_created_at = 1594403342
-            tx_0.tx_status = TxStatus.RECEIVED_NOT_CONFIRMED
             tx_0.tx_confirmations += 1
+            tx_0.tx_max_confirmations = 3
             tx_0.memo_to = '0x2d6F329Da0e983288E57DBca1e496dd60fae5437'
 
             assert tx_0 == bts_in_tx_0
@@ -970,9 +944,9 @@ class MockBTSGatewayBookerOrderAPIServer(GatewayBookerOrderAPIServer):
                 tx_from=tx_0.tx_from,
                 tx_amount=tx_0.tx_amount,
                 tx_created_at=tx_0.tx_created_at,
-                tx_status=tx_0.tx_status,
                 tx_error=tx_0.tx_error,
                 tx_confirmations=tx_0.tx_confirmations,
+                tx_max_confirmations=tx_0.tx_max_confirmations,
                 memo_to=tx_0.memo_to
             )
 
@@ -994,9 +968,9 @@ class MockBTSGatewayBookerOrderAPIServer(GatewayBookerOrderAPIServer):
             self.orders[in_order_id].in_tx = tx_1
             tx_order = UpdateTxOrder(
                 order_id=in_order_id,
-                tx_status=tx_1.tx_status,
                 tx_error=tx_1.tx_error,
-                tx_confirmations=tx_1.tx_confirmations
+                tx_confirmations=tx_1.tx_confirmations,
+                tx_max_confirmations=tx_1.tx_max_confirmations
             )
 
             assert tx_order == update_bts_in_tx_order_0
@@ -1009,7 +983,6 @@ class MockBTSGatewayBookerOrderAPIServer(GatewayBookerOrderAPIServer):
                 await update_tx_order.asend(None)
         elif self.step == 5:
             tx_2 = deepcopy(self.txs[in_tx_id])
-            tx_2.tx_status = TxStatus.RECEIVED_AND_CONFIRMED
             tx_2.tx_confirmations += 1
 
             assert tx_2 == bts_in_tx_2
@@ -1018,9 +991,9 @@ class MockBTSGatewayBookerOrderAPIServer(GatewayBookerOrderAPIServer):
             self.orders[in_order_id].in_tx = tx_2
             tx_order = UpdateTxOrder(
                 order_id=in_order_id,
-                tx_status=tx_2.tx_status,
                 tx_error=tx_2.tx_error,
-                tx_confirmations=tx_2.tx_confirmations
+                tx_confirmations=tx_2.tx_confirmations,
+                tx_max_confirmations=tx_2.tx_max_confirmations
             )
 
             assert tx_order == update_bts_in_tx_order_1
@@ -1094,10 +1067,15 @@ async def test_new_order() -> None:
 
     apis_server.api_register(booker_server)
 
-    eth_booker_http_client = TestClient(server)
-    eth_booker_client_ws_stream = await eth_booker_http_client.ws_connect('/')
+    async def eth_booker_client_ws_stream_constructor(
+    ) -> ClientWebSocketResponse:
+        http_client = TestClient(server)
+        client_ws_stream = await http_client.ws_connect('/')
+
+        return client_ws_stream
+
     eth_booker_apis_client = WSJSONRPCAPIsClient(
-        stream=eth_booker_client_ws_stream
+        stream_constructor=eth_booker_client_ws_stream_constructor
     )
     eth_booker_client = MockBookerGatewayOrderAPIClient(
         apis_client=eth_booker_apis_client
@@ -1112,17 +1090,29 @@ async def test_new_order() -> None:
 
     apis_server.api_register(eth_server)
 
-    eth_http_client = TestClient(server)
-    eth_client_ws_stream = await eth_http_client.ws_connect('/')
-    eth_apis_client = WSJSONRPCAPIsClient(stream=eth_client_ws_stream)
+    async def eth_gateway_client_ws_stream_constructor(
+    ) -> ClientWebSocketResponse:
+        http_client = TestClient(server)
+        client_ws_stream = await http_client.ws_connect('/')
+
+        return client_ws_stream
+
+    eth_apis_client = WSJSONRPCAPIsClient(
+        stream_constructor=eth_gateway_client_ws_stream_constructor
+    )
     eth_gateway_client = MockETHGatewayBookerOrderAPIClient(
         apis_client=eth_apis_client
     )
 
-    bts_booker_http_client = TestClient(server)
-    bts_booker_client_ws_stream = await bts_booker_http_client.ws_connect('/')
+    async def bts_booker_client_ws_stream_constructor(
+    ) -> ClientWebSocketResponse:
+        http_client = TestClient(server)
+        client_ws_stream = await http_client.ws_connect('/')
+
+        return client_ws_stream
+
     bts_booker_apis_client = WSJSONRPCAPIsClient(
-        stream=bts_booker_client_ws_stream
+        stream_constructor=bts_booker_client_ws_stream_constructor
     )
     bts_booker_client = MockBookerGatewayOrderAPIClient(
         apis_client=bts_booker_apis_client
@@ -1137,9 +1127,16 @@ async def test_new_order() -> None:
 
     apis_server.api_register(bts_server)
 
-    bts_http_client = TestClient(server)
-    bts_client_ws_stream = await bts_http_client.ws_connect('/')
-    bts_apis_client = WSJSONRPCAPIsClient(stream=bts_client_ws_stream)
+    async def bts_gateway_client_ws_stream_constructor(
+    ) -> ClientWebSocketResponse:
+        http_client = TestClient(server)
+        client_ws_stream = await http_client.ws_connect('/')
+
+        return client_ws_stream
+
+    bts_apis_client = WSJSONRPCAPIsClient(
+        stream_constructor=bts_gateway_client_ws_stream_constructor
+    )
     bts_gateway_client = MockBTSGatewayBookerOrderAPIClient(
         apis_client=bts_apis_client
     )

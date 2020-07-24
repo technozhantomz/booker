@@ -1,32 +1,48 @@
 import asyncio
 import logging
 
-from aiohttp.web import GracefulExit, Application, AppRunner, TCPSite
+from aiohttp.web import (
+    AppRunner as HTTPAppRunner,
+    TCPSite as HTTPTCPSite,
+    RouteTableDef as HTTPRouteTableDef
+)
 
-from booker.config import Config
-from booker.http.handlers import routes
+from booker.app import AppContext
 
 
-async def server_loop(config: Config) -> None:
-    app = Application()
+async def server(runner: HTTPAppRunner) -> None:
+    logging.info('HTTP server has started.')
 
-    app.add_routes(routes)
+    cancel_signal = asyncio.Event()
 
-    runner = AppRunner(app)
+    try:
+        await asyncio.wait({asyncio.create_task(cancel_signal.wait())})
+    except asyncio.CancelledError:
+        logging.debug('HTTP server is stopping.')
+
+        await runner.cleanup()
+
+        logging.info('HTTP server has stopped.')
+
+
+async def start_server(
+    context: AppContext,
+    handlers: HTTPRouteTableDef
+) -> None:
+    logging.debug('HTTP server is starting.')
+
+    context.http_app.add_routes(handlers)
+
+    runner = HTTPAppRunner(context.http_app)
 
     await runner.setup()
 
-    try:
-        site = TCPSite(runner, config.http_host, config.http_port)
+    site = HTTPTCPSite(
+        runner,
+        context.config.http_host,
+        context.config.http_port
+    )
 
-        await site.start()
+    await site.start()
 
-        logging.info('HTTP server is running.')
-
-        while True:
-            await asyncio.sleep(3600)
-    except (GracefulExit, KeyboardInterrupt):
-        ...
-    finally:
-        await runner.cleanup()
-        logging.info('HTTP service has stopped.')
+    context.http_task = asyncio.create_task(server(runner))
