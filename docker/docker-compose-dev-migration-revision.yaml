@@ -13,19 +13,27 @@ services:
       retries: 100
   backend:
     build:
-        context: .
+        context: ..
+        dockerfile: docker/Dockerfile
         args:
           HTTP_PORT: '${HTTP_PORT}'
+          ZMQ_PROTO: '${ZMQ_PROTO}'
+          ZMQ_PORT: '${ZMQ_PORT}'
     environment:
-      HTTP_HOST: '${HTTP_HOST}'
-      HTTP_PORT: '${HTTP_PORT}'
       DB_DRIVER: postgres+psycopg2
       DB_HOST: db
       DB_PORT: 5432
       DB_USER: '${DB_USER}'
       DB_PASSWORD: '${DB_PASSWORD}'
       DB_DATABASE: '${DB_DATABASE}'
-    command: sh -c 'pipenv run typecheck; pipenv run test'
+      HTTP_HOST: '${HTTP_HOST}'
+      HTTP_PORT: '${HTTP_PORT}'
+      ZMQ_PROTO: '${ZMQ_PROTO}'
+      ZMQ_HOST: '${ZMQ_HOST}'
+      ZMQ_PORT: '${ZMQ_PORT}'
+    command: sh -c 'pipenv run migrate && pipenv run migration_revision'
+    volumes:
+      - ../booker/db/migrations/versions:/booker/booker/db/migrations/versions
     depends_on:
       db:
         condition: service_healthy

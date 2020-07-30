@@ -6,4 +6,4 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: Run tests
-        run: docker-compose -f docker-compose-dev-test.yml --env-file .env.example up -V --remove-orphans --exit-code-from backend --build
+        run: docker-compose -f docker/docker-compose-dev-test.yml --env-file .env.example up -V --remove-orphans --exit-code-from backend --build

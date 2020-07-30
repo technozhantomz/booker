@@ -62,8 +62,13 @@ COPY conftest.py .
 COPY Pipfile .
 
 ARG HTTP_PORT
+ARG ZMQ_PROTO
+ARG ZMQ_PORT
 ENV HTTP_PORT="${HTTP_PORT}"
+ENV ZMQ_PROTO="${ZMQ_PROTO}"
+ENV ZMQ_PORT="${ZMQ_PORT}"
 
 EXPOSE "${HTTP_PORT}/tcp"
+EXPOSE "${ZMQ_PORT}/${ZMQ_PROTO}"
 
 CMD pipenv run migrate && pipenv run serve

@@ -10,7 +10,7 @@ from marshmallow.exceptions import (
 from marshmallow_dataclass import dataclass
 
 from booker.dto import DTOInvalidType, DataTransferClass
-from booker.api import (
+from booker.rpc.api import (
     APIMethodNotFound,
     APIUnknownOk,
     APIUnknownError,
