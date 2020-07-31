@@ -34,7 +34,7 @@ async def new_in_order(context: AppContext, args: NewInOrder) -> None:
 
     while True:
         try:
-            await in_gateway_coro.send(None)
+            await in_gateway_coro.asend(None)
         except StopAsyncIteration:
             break
 
@@ -90,7 +90,7 @@ async def new_out_order(context: AppContext, args: NewOutOrder) -> None:
 
     while True:
         try:
-            await out_gateway_coro.send(None)
+            await out_gateway_coro.asend(None)
         except StopAsyncIteration:
             break
 
@@ -150,7 +150,8 @@ async def new_in_order_request(
         coin=args.out_tx_coin,
     )
     order_id = uuid4()
-    order_query = sa.insert(Tx).values(
+    order_query = sa.insert(Order).values(
+        id=order_id,
         type=args.order_type,
         in_tx=in_tx_id,
         out_tx=out_tx_id,

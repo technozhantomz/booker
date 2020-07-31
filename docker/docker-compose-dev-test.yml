@@ -31,7 +31,7 @@ services:
       ZMQ_PROTO: '${ZMQ_PROTO}'
       ZMQ_HOST: '${ZMQ_HOST}'
       ZMQ_PORT: '${ZMQ_PORT}'
-    command: sh -c 'pipenv run typecheck; pipenv run test'
+    command: sh -c 'pipenv run typecheck; pipenv run migrate && pipenv run test'
     depends_on:
       db:
         condition: service_healthy
