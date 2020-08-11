@@ -4,7 +4,10 @@ import asyncio
 import logging
 
 from aiopg.sa import Engine as DBEngine, create_engine as create_db_engine
-from aiohttp.web import Application as HTTPApp
+from aiohttp.web import (
+    Application as HTTPApp,
+    RouteTableDef as HTTPRouteTableDef
+)
 
 from booker.config import Config
 from booker.rpc.gateway.api import AbstractGatewayBookerOrderAPIClient
@@ -46,7 +49,9 @@ class AppContext:
 
 
     async def run(self) -> None:
-        from booker.http.handlers import handlers as http_handlers
+        from booker.http.handlers import (
+            construct_handlers as construct_http_handlers
+        )
         from booker.http.server import start_server as start_http_server
         from booker.rpc.gateway.handlers import BookerGatewayOrderAPIServer
         from booker.rpc.gateway.client import GatewayBookerOrderAPIClient
@@ -92,6 +97,10 @@ class AppContext:
             start_ws_jsonrpc_server(self, rpc_handlers),
             start_zmq_jsonrpc_server(self, rpc_handlers)
         )
+
+        http_handlers = HTTPRouteTableDef()
+
+        construct_http_handlers(self, http_handlers)
         await start_http_server(self, http_handlers)
         await start_process_orders_server(self)
 

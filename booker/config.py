@@ -21,6 +21,7 @@ class Config(DataTransferClass):
     zmq_proto: str = 'tcp'
     zmq_host: str = '127.0.0.1'
     zmq_port: int = 8081
+    client_transport: str = 'ws'
 
 
     def with_environment(self) -> None:
