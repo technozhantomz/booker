@@ -23,7 +23,7 @@ cd booker
 ```
 3. Start the services by running the command:
 ```bash
-sudo docker-compose up
+sudo docker-compose -f docker/docker-compose.yml up
 ```
 
 # Contributing
