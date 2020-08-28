@@ -1,5 +1,5 @@
 from os import getenv
-
+import logging
 from marshmallow.exceptions import (
     ValidationError as MarshmallowSchemaValidationError
 )
@@ -23,11 +23,11 @@ class Config(DataTransferClass):
     zmq_port: int = 8081
     client_transport: str = 'ws'
 
-
     def with_environment(self) -> None:
         schema = type(self).Schema()
 
         try:
+            logging.debug("Try to load config from .env-file")
             updater = schema.load({
                 'db_driver': getenv('DB_DRIVER'),
                 'db_host': getenv('DB_HOST'),
@@ -41,9 +41,15 @@ class Config(DataTransferClass):
                 'zmq_host': getenv('ZMQ_HOST'),
                 'zmq_port': getenv('ZMQ_PORT')
             })
+            self.update(updater)
+            logging.info("Config from .env-file successfully loaded")
+
         except MarshmallowSchemaValidationError as exception:
             logging.debug(exception)
 
             raise DTOInvalidType(f'Invalid payload type: {exception}')
 
-        self.update(updater)
+        except Exception as exception:
+            logging.exception(f"Unable to load config from .env-file: {exception}")
+
+

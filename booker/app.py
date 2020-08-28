@@ -26,6 +26,7 @@ class AppContext:
         super().__init__()
 
         self.config = Config()
+        self.config.with_environment()
         self.http_app = HTTPApp()
         self.tasks = {*()}
         self.gateway_ws_clients = {}
