@@ -1,0 +1,38 @@
+version: '3.2'
+
+services:
+
+  postgres:
+      image: postgres:10
+      container_name: booker_postgres
+      volumes:
+        - "/var/run/postgres/postgres.sock:/var/run/postgres/postgres.sock"
+        - "dbdata:/var/lib/postgresql/data"
+      environment:
+        - POSTGRES_USER=${DATABASE_USERNAME}
+        - POSTGRES_PASSWORD=${DATABASE_PASSWORD}
+        - POSTGRES_DB=${DATABASE_NAME}
+      expose:
+        - "${DATABASE_PORT}"
+      ports:
+        - ${DATABASE_PORT}:${DATABASE_PORT}
+      command: -p ${DATABASE_PORT}
+
+  booker:
+    build: .
+    container_name: booker
+    volumes:
+      - ./:/booker
+    command: >
+      bash -c "pipenv run alembic upgrade head
+      && pipenv run python . "
+    ports:
+      - ${HTTP_PORT}:${HTTP_PORT}
+    expose:
+      - "${HTTP_PORT}"
+    depends_on:
+      - postgres
+
+
+volumes:
+  dbdata:
