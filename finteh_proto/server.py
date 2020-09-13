@@ -1,4 +1,10 @@
-from aiohttp.web import Application, TCPSite, AppRunner,  Request as HTTPRequest, Response as HTTPResponse
+from aiohttp.web import (
+    Application,
+    TCPSite,
+    AppRunner,
+    Request as HTTPRequest,
+    Response as HTTPResponse,
+)
 from aiohttp_json_rpc import JsonRpc
 from aiohttp_json_rpc.communicaton import JsonRpcRequest
 
@@ -17,13 +23,11 @@ class BaseServer(JsonRpc):
         self._port = port
         self.app = Application()
 
-        self.add_methods(
-            ('', self.ping),
-        )
+        self.add_methods(("", self.ping))
 
     async def start(self):
-        self.app.router.add_route('*', '/', self.handle_request)
-        self.app.router.add_route('*', '/status', self.status)
+        self.app.router.add_route("*", "/", self.handle_request)
+        self.app.router.add_route("*", "/status", self.status)
         self.runner = AppRunner(self.app)
         await self.runner.setup()
         self.site = TCPSite(self.runner, self._host, self._port)
@@ -35,8 +39,8 @@ class BaseServer(JsonRpc):
     async def ping(self, request: JsonRpcRequest):
         """WS health check"""
         assert isinstance(request, JsonRpcRequest)
-        return 'pong'
+        return "pong"
 
     async def status(self, request: HTTPRequest) -> HTTPResponse:
         """Http health check"""
-        return HTTPResponse(text='Ok')
+        return HTTPResponse(text="Ok")

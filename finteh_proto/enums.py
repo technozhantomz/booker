@@ -27,16 +27,10 @@ class TxError(Enum):
     TX_HASH_NOT_FOUND = 8
 
 
-PUBLIC_ENUMS = {
-    'OrderType': OrderType,
-    'TxStatus': TxStatus,
-    'TxError': TxError
-
-}
+PUBLIC_ENUMS = {"OrderType": OrderType, "TxStatus": TxStatus, "TxError": TxError}
 
 
 class EnumEncoder(json.JSONEncoder):
-
     def default(self, obj):
         if type(obj) in PUBLIC_ENUMS.values():
             return {"__enum__": str(obj)}
@@ -46,7 +40,7 @@ class EnumEncoder(json.JSONEncoder):
 def as_enum(d):
     if isinstance(d, dict):
         for k, v in d.items():
-            if k == '__enum__':
+            if k == "__enum__":
                 name, member = d["__enum__"].split(".")
                 return getattr(PUBLIC_ENUMS[name], member)
     else:

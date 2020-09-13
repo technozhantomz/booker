@@ -1,5 +1,7 @@
 [![License]][LICENSE.md]
 [![Telegram]][Teletram join]
+![build](https://github.com/fincubator/booker/workflows/build/badge.svg)
+![pre-commit](https://github.com/fincubator/booker/workflows/pre-commit/badge.svg)
 [![Code style: black]][black code style]
 
 --------------------------------------------------------------------------------

@@ -9,7 +9,7 @@ class BaseClient(JsonRpcClient):
         self._port = port
 
     async def ping(self):
-        call_result = await self.call('ping')
+        call_result = await self.call("ping")
         return call_result
 
     @classmethod
@@ -24,8 +24,7 @@ class BaseClient(JsonRpcClient):
                 result = ex
             await client.disconnect()
             return result
+
         return process_call
 
     # TODO Error handle decorator
-
-

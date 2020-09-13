@@ -2,20 +2,28 @@ import datetime
 from uuid import uuid4
 
 from gateway_api.gateway_server import GatewayServer
-from finteh_proto.dto import TransactionDTO, OrderDTO, DepositAddressDTO, ValidateAddressDTO, Decimal
+from finteh_proto.dto import (
+    TransactionDTO,
+    OrderDTO,
+    DepositAddressDTO,
+    ValidateAddressDTO,
+    Decimal,
+)
 from booker_api.booker_side_client import BookerSideClient
 
 import pytest
 
 
-TEST_TX = TransactionDTO(amount=Decimal('10.1'),
-                         tx_id="some:hash",
-                         coin="USDT",
-                         to_address="one",
-                         from_address="two",
-                         confirmations=0,
-                         max_confirmations=1,
-                         created_at=datetime.datetime.now())
+TEST_TX = TransactionDTO(
+    amount=Decimal("10.1"),
+    tx_id="some:hash",
+    coin="USDT",
+    to_address="one",
+    from_address="two",
+    confirmations=0,
+    max_confirmations=1,
+    created_at=datetime.datetime.now(),
+)
 
 TEST_ORDER = OrderDTO(order_id=str(uuid4()), in_tx=TEST_TX)
 

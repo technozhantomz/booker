@@ -3,7 +3,6 @@ from uuid import UUID, uuid4
 from marshmallow_dataclass import dataclass
 
 
-
 class JSONRPCAPIResultAndError(Exception):
     def __init__(self, message: str) -> None:
         super().__init__(message)
@@ -65,4 +64,3 @@ class JSONRPCResponse:
     result: Optional[Any]
     error: Optional[JSONRPCError]
     id: UUID
-

@@ -18,11 +18,11 @@ class DataTransferClass:
         # TODO replace this later
         _dict = dataclasses.asdict(self)
         for k, v in _dict.items():
-            if k in ('in_tx', 'out_tx'):
+            if k in ("in_tx", "out_tx"):
                 if not _dict[k]:
                     continue
-                _dict[k]['amount'] = str(_dict[k]['amount'])
-                _dict[k]['created_at'] = str(_dict[k]['created_at'])
+                _dict[k]["amount"] = str(_dict[k]["amount"])
+                _dict[k]["created_at"] = str(_dict[k]["created_at"])
             if isinstance(v, Decimal):
                 _dict[k] = str(v)
             if isinstance(v, datetime.datetime):
@@ -47,7 +47,9 @@ class TransactionDTO(DataTransferClass):
         """Cast types after init from json.loads()"""
         self.error = as_enum(self.error)
         self.amount = Decimal(self.amount)
-        self.created_at = datetime.datetime.strptime(self.created_at, "%Y-%m-%d %H:%M:%S.%f")
+        self.created_at = datetime.datetime.strptime(
+            self.created_at, "%Y-%m-%d %H:%M:%S.%f"
+        )
         return self
 
 

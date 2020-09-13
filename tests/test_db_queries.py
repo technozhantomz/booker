@@ -15,7 +15,7 @@ async def _get_db_engine():
         port=cfg.db_port,
         user=cfg.db_user,
         password=cfg.db_password,
-        database=cfg.db_database
+        database=cfg.db_database,
     )
     return db_engine
 
@@ -25,28 +25,31 @@ async def test_insert_tx():
     try:
         engine = await _get_db_engine()
         async with engine.acquire() as conn:
-            tx = Tx(id=uuid4(),
-                    coin="USDT",
-                    # tx_id="some_id",
-                    from_address="some_sender",
-                    to_address="some_receiver",
-                    amount=10.1,
-                    created_at=datetime.datetime.now(),
-                    error=TxError.NO_ERROR,
-                    confirmations=0,
-                    max_confirmations=1
-                    )
+            tx = Tx(
+                id=uuid4(),
+                coin="USDT",
+                # tx_id="some_id",
+                from_address="some_sender",
+                to_address="some_receiver",
+                amount=10.1,
+                created_at=datetime.datetime.now(),
+                error=TxError.NO_ERROR,
+                confirmations=0,
+                max_confirmations=1,
+            )
             r = await insert_tx(conn, tx)
             assert r
 
             r = await conn.execute(select([Tx]).where(Tx.id == tx.id))
             tx_from_db = await r.fetchone()
-            error = tx_from_db['error']
+            error = tx_from_db["error"]
             assert type(error) == TxError
             await delete_tx(conn, tx.tx_id)
 
     except Exception as ex:
-        pytest.skip(msg=f"Bad database connection: {ex}\nmaybe database bad config or not started?")
+        pytest.skip(
+            msg=f"Bad database connection: {ex}\nmaybe database bad config or not started?"
+        )
 
 
 @pytest.mark.asyncio
@@ -54,35 +57,34 @@ async def test_update_tx():
     try:
         engine = await _get_db_engine()
         async with engine.acquire() as conn:
-            tx = Tx(id=uuid4(),
-                    coin="USDT",
-                    tx_id="some_id",
-                    from_address="some_sender",
-                    to_address="some_receiver",
-                    amount=10.1,
-                    created_at=datetime.datetime.now(),
-                    error=TxError.NO_ERROR,
-                    confirmations=0,
-                    max_confirmations=1
-                    )
-            out_tx = Tx(id=uuid4(),
-                        coin="FINTEH.USDT",
-                        # tx_id="some_id2",
-                        from_address="some_sender",
-                        to_address="some_receiver",
-                        amount=9.99,
-                        created_at=datetime.datetime.now(),
-                        error=TxError.NO_ERROR,
-                        confirmations=0,
-                        max_confirmations=1
-                        )
+            tx = Tx(
+                id=uuid4(),
+                coin="USDT",
+                tx_id="some_id",
+                from_address="some_sender",
+                to_address="some_receiver",
+                amount=10.1,
+                created_at=datetime.datetime.now(),
+                error=TxError.NO_ERROR,
+                confirmations=0,
+                max_confirmations=1,
+            )
+            out_tx = Tx(
+                id=uuid4(),
+                coin="FINTEH.USDT",
+                # tx_id="some_id2",
+                from_address="some_sender",
+                to_address="some_receiver",
+                amount=9.99,
+                created_at=datetime.datetime.now(),
+                error=TxError.NO_ERROR,
+                confirmations=0,
+                max_confirmations=1,
+            )
             await insert_tx(conn, tx)
             await insert_tx(conn, out_tx)
             order = Order(
-                id=uuid4(),
-                in_tx=tx.id,
-                out_tx=out_tx.id,
-                order_type=OrderType.DEPOSIT
+                id=uuid4(), in_tx=tx.id, out_tx=out_tx.id, order_type=OrderType.DEPOSIT
             )
 
             await insert_order(conn, order)
@@ -95,7 +97,9 @@ async def test_update_tx():
             await delete_tx(conn, out_tx.tx_id)
 
     except Exception as ex:
-        pytest.skip(msg=f"Bad database connection: {ex}\nmaybe database bad config or not started?")
+        pytest.skip(
+            msg=f"Bad database connection: {ex}\nmaybe database bad config or not started?"
+        )
 
 
 @pytest.mark.asyncio
@@ -103,31 +107,33 @@ async def test_insert_order():
     try:
         engine = await _get_db_engine()
         async with engine.acquire() as conn:
-            in_tx = Tx(id=uuid4(),
-                       coin="USDT",
-                       tx_id="some_id1",
-                       from_address="some_sender",
-                       to_address="some_receiver",
-                       amount=10.1,
-                       created_at=datetime.datetime.now(),
-                       error=TxError.NO_ERROR,
-                       confirmations=1,
-                       max_confirmations=1
-                       )
+            in_tx = Tx(
+                id=uuid4(),
+                coin="USDT",
+                tx_id="some_id1",
+                from_address="some_sender",
+                to_address="some_receiver",
+                amount=10.1,
+                created_at=datetime.datetime.now(),
+                error=TxError.NO_ERROR,
+                confirmations=1,
+                max_confirmations=1,
+            )
 
             await insert_tx(conn, in_tx)
 
-            out_tx = Tx(id=uuid4(),
-                        coin="FINTEH.USDT",
-                        # tx_id="some_id2",
-                        from_address="some_sender",
-                        to_address="some_receiver",
-                        amount=9.99,
-                        created_at=datetime.datetime.now(),
-                        error=TxError.NO_ERROR,
-                        confirmations=0,
-                        max_confirmations=1
-                        )
+            out_tx = Tx(
+                id=uuid4(),
+                coin="FINTEH.USDT",
+                # tx_id="some_id2",
+                from_address="some_sender",
+                to_address="some_receiver",
+                amount=9.99,
+                created_at=datetime.datetime.now(),
+                error=TxError.NO_ERROR,
+                confirmations=0,
+                max_confirmations=1,
+            )
 
             await insert_tx(conn, out_tx)
 
@@ -135,7 +141,7 @@ async def test_insert_order():
                 id=uuid4(),
                 in_tx=in_tx.id,
                 out_tx=out_tx.id,
-                order_type=OrderType.DEPOSIT
+                order_type=OrderType.DEPOSIT,
             )
 
             r = await insert_order(conn, order)
@@ -147,7 +153,9 @@ async def test_insert_order():
                 await delete_tx(conn, out_tx.tx_id)
 
     except Exception as ex:
-        pytest.skip(msg=f"Bad database connection: {ex}\nmaybe database bad config or not started?")
+        pytest.skip(
+            msg=f"Bad database connection: {ex}\nmaybe database bad config or not started?"
+        )
 
 
 @pytest.mark.asyncio
@@ -156,31 +164,33 @@ async def test_select_all_orders():
         engine = await _get_db_engine()
 
         async with engine.acquire() as conn:
-            in_tx = Tx(id=uuid4(),
-                       coin="USDT",
-                       tx_id="some_id1",
-                       from_address="some_sender",
-                       to_address="some_receiver",
-                       amount=10.1,
-                       created_at=datetime.datetime.now(),
-                       error=TxError.NO_ERROR,
-                       confirmations=0,
-                       max_confirmations=1
-                       )
+            in_tx = Tx(
+                id=uuid4(),
+                coin="USDT",
+                tx_id="some_id1",
+                from_address="some_sender",
+                to_address="some_receiver",
+                amount=10.1,
+                created_at=datetime.datetime.now(),
+                error=TxError.NO_ERROR,
+                confirmations=0,
+                max_confirmations=1,
+            )
 
             await insert_tx(conn, in_tx)
 
-            out_tx = Tx(id=uuid4(),
-                        coin="FINTEH.USDT",
-                        # tx_id=None,
-                        from_address="some_sender",
-                        to_address="some_receiver",
-                        amount=9.99,
-                        created_at=datetime.datetime.now(),
-                        error=TxError.NO_ERROR,
-                        confirmations=0,
-                        max_confirmations=1
-                        )
+            out_tx = Tx(
+                id=uuid4(),
+                coin="FINTEH.USDT",
+                # tx_id=None,
+                from_address="some_sender",
+                to_address="some_receiver",
+                amount=9.99,
+                created_at=datetime.datetime.now(),
+                error=TxError.NO_ERROR,
+                confirmations=0,
+                max_confirmations=1,
+            )
 
             await insert_tx(conn, out_tx)
 
@@ -188,7 +198,7 @@ async def test_select_all_orders():
                 id=uuid4(),
                 in_tx=in_tx.id,
                 out_tx=out_tx.id,
-                order_type=OrderType.DEPOSIT
+                order_type=OrderType.DEPOSIT,
             )
 
             await insert_order(conn, order)
@@ -203,7 +213,9 @@ async def test_select_all_orders():
             assert r
 
     except Exception as ex:
-        pytest.skip(msg=f"Bad database connection: {ex}\nmaybe database bad config or not started?")
+        pytest.skip(
+            msg=f"Bad database connection: {ex}\nmaybe database bad config or not started?"
+        )
 
 
 @pytest.mark.asyncio
@@ -212,77 +224,83 @@ async def test_select_orders_to_process():
         engine = await _get_db_engine()
 
         async with engine.acquire() as conn:
-            in_tx1 = Tx(id=uuid4(),
-                        coin="USDT",
-                        tx_id="some_id11",
-                        from_address="some_sender",
-                        to_address="some_receiver",
-                        amount=10.1,
-                        created_at=datetime.datetime.now(),
-                        error=TxError.NO_ERROR,
-                        confirmations=4,
-                        max_confirmations=3
-                        )
+            in_tx1 = Tx(
+                id=uuid4(),
+                coin="USDT",
+                tx_id="some_id11",
+                from_address="some_sender",
+                to_address="some_receiver",
+                amount=10.1,
+                created_at=datetime.datetime.now(),
+                error=TxError.NO_ERROR,
+                confirmations=4,
+                max_confirmations=3,
+            )
 
-            out_tx1 = Tx(id=uuid4(),
-                         coin="FINTEH.USDT",
-                         tx_id="some_id2",
-                         from_address="some_sender",
-                         to_address="some_receiver",
-                         amount=9.99,
-                         created_at=datetime.datetime.now(),
-                         error=TxError.NO_ERROR,
-                         confirmations=3,
-                         max_confirmations=3
-                         )
+            out_tx1 = Tx(
+                id=uuid4(),
+                coin="FINTEH.USDT",
+                tx_id="some_id2",
+                from_address="some_sender",
+                to_address="some_receiver",
+                amount=9.99,
+                created_at=datetime.datetime.now(),
+                error=TxError.NO_ERROR,
+                confirmations=3,
+                max_confirmations=3,
+            )
 
-            in_tx2 = Tx(id=uuid4(),
-                        coin="USDT",
-                        tx_id="some_id21",
-                        from_address="some_sender",
-                        to_address="some_receiver",
-                        amount=10.1,
-                        created_at=datetime.datetime.now(),
-                        error=TxError.NO_ERROR,
-                        confirmations=3,
-                        max_confirmations=3
-                        )
+            in_tx2 = Tx(
+                id=uuid4(),
+                coin="USDT",
+                tx_id="some_id21",
+                from_address="some_sender",
+                to_address="some_receiver",
+                amount=10.1,
+                created_at=datetime.datetime.now(),
+                error=TxError.NO_ERROR,
+                confirmations=3,
+                max_confirmations=3,
+            )
 
-            out_tx2 = Tx(id=uuid4(),
-                         coin="FINTEH.USDT",
-                         tx_id="some_id22",
-                         from_address="some_sender",
-                         to_address="some_receiver",
-                         amount=9.99,
-                         created_at=datetime.datetime.now(),
-                         error=TxError.NO_ERROR,
-                         confirmations=3,
-                         max_confirmations=3
-                         )
+            out_tx2 = Tx(
+                id=uuid4(),
+                coin="FINTEH.USDT",
+                tx_id="some_id22",
+                from_address="some_sender",
+                to_address="some_receiver",
+                amount=9.99,
+                created_at=datetime.datetime.now(),
+                error=TxError.NO_ERROR,
+                confirmations=3,
+                max_confirmations=3,
+            )
 
-            in_tx3 = Tx(id=uuid4(),
-                        coin="USDT",
-                        tx_id="some_id31",
-                        from_address="some_sender",
-                        to_address="some_receiver",
-                        amount=10.1,
-                        created_at=datetime.datetime.now(),
-                        error=TxError.NO_ERROR,
-                        confirmations=3,
-                        max_confirmations=3
-                        )
+            in_tx3 = Tx(
+                id=uuid4(),
+                coin="USDT",
+                tx_id="some_id31",
+                from_address="some_sender",
+                to_address="some_receiver",
+                amount=10.1,
+                created_at=datetime.datetime.now(),
+                error=TxError.NO_ERROR,
+                confirmations=3,
+                max_confirmations=3,
+            )
 
-            out_tx3 = Tx(id=uuid4(),
-                         coin="FINTEH.USDT",
-                         tx_id=None,
-                         from_address="some_sender",
-                         to_address="some_receiver",
-                         amount=9.99,
-                         created_at=datetime.datetime.now(),
-                         error=TxError.NO_ERROR,
-                         confirmations=0,
-                         max_confirmations=3
-                         )
+            out_tx3 = Tx(
+                id=uuid4(),
+                coin="FINTEH.USDT",
+                tx_id=None,
+                from_address="some_sender",
+                to_address="some_receiver",
+                amount=9.99,
+                created_at=datetime.datetime.now(),
+                error=TxError.NO_ERROR,
+                confirmations=0,
+                max_confirmations=3,
+            )
 
             for i in (in_tx1, in_tx2, in_tx3, out_tx1, out_tx2, out_tx3):
                 await insert_tx(conn, i)
@@ -291,19 +309,19 @@ async def test_select_orders_to_process():
                 id=uuid4(),
                 in_tx=in_tx1.id,
                 out_tx=out_tx1.id,
-                order_type=OrderType.DEPOSIT
+                order_type=OrderType.DEPOSIT,
             )
             order2 = Order(
                 id=uuid4(),
                 in_tx=in_tx2.id,
                 out_tx=out_tx2.id,
-                order_type=OrderType.DEPOSIT
+                order_type=OrderType.DEPOSIT,
             )
             order3 = Order(
                 id=uuid4(),
                 in_tx=in_tx3.id,
                 out_tx=out_tx3.id,
-                order_type=OrderType.DEPOSIT
+                order_type=OrderType.DEPOSIT,
             )
 
             for i in (order1, order2, order3):
@@ -319,11 +337,13 @@ async def test_select_orders_to_process():
 
             assert len(orders_to_process) == 1
             for i in orders_to_process:
-                assert isinstance(i['in_tx_error'], TxError)
-                assert isinstance(i['order_type'], OrderType)
+                assert isinstance(i["in_tx_error"], TxError)
+                assert isinstance(i["order_type"], OrderType)
 
     except Exception as ex:
-        pytest.skip(msg=f"Bad database connection: {ex}\nmaybe database bad config or not started?")
+        pytest.skip(
+            msg=f"Bad database connection: {ex}\nmaybe database bad config or not started?"
+        )
 
 
 @pytest.mark.asyncio
@@ -331,35 +351,34 @@ async def test_safe_insert_order():
     engine = await _get_db_engine()
 
     async with engine.acquire() as conn:
-        in_tx1 = Tx(id=uuid4(),
-                    coin="USDT",
-                    tx_id="some_id11",
-                    from_address="some_sender",
-                    to_address="some_receiver",
-                    amount=10.1,
-                    created_at=datetime.datetime.now(),
-                    error=TxError.NO_ERROR,
-                    confirmations=4,
-                    max_confirmations=3
-                    )
+        in_tx1 = Tx(
+            id=uuid4(),
+            coin="USDT",
+            tx_id="some_id11",
+            from_address="some_sender",
+            to_address="some_receiver",
+            amount=10.1,
+            created_at=datetime.datetime.now(),
+            error=TxError.NO_ERROR,
+            confirmations=4,
+            max_confirmations=3,
+        )
 
-        out_tx1 = Tx(id=uuid4(),
-                     coin="FINTEH.USDT",
-                     tx_id="some_id2",
-                     from_address="some_sender",
-                     to_address="some_receiver",
-                     amount=9.99,
-                     created_at=datetime.datetime.now(),
-                     error=TxError.NO_ERROR,
-                     confirmations=3,
-                     max_confirmations=3
-                     )
+        out_tx1 = Tx(
+            id=uuid4(),
+            coin="FINTEH.USDT",
+            tx_id="some_id2",
+            from_address="some_sender",
+            to_address="some_receiver",
+            amount=9.99,
+            created_at=datetime.datetime.now(),
+            error=TxError.NO_ERROR,
+            confirmations=3,
+            max_confirmations=3,
+        )
 
         order1 = Order(
-            id=uuid4(),
-            in_tx=in_tx1.id,
-            out_tx=out_tx1.id,
-            order_type=OrderType.DEPOSIT
+            id=uuid4(), in_tx=in_tx1.id, out_tx=out_tx1.id, order_type=OrderType.DEPOSIT
         )
 
         r = await safe_insert_order(conn, in_tx1, out_tx1, order1)

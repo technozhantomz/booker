@@ -11,7 +11,7 @@ async def test_base_ping_pong():
     await server.start()
 
     client = BaseClient()
-    await client.connect('0.0.0.0', 8080)
+    await client.connect("0.0.0.0", 8080)
 
     call_result = await client.ping()
     assert call_result == "pong"

@@ -22,10 +22,7 @@ class Config:
     http_host: str = "0.0.0.0"
     http_port: int = 8080
 
-    gateways: dict = {
-        "USDT": {"native": None,
-                 "target": ["0.0.0.0", 6666]},
-    }
+    gateways: dict = {"USDT": {"native": None, "target": ["0.0.0.0", 6666]}}
 
     def with_env(self):
 
@@ -33,16 +30,14 @@ class Config:
         load_dotenv()
         new_params = dict(
             gateway_prefix=getenv("GATEWAY_PREFIX"),
-
-            db_driver=getenv('DATABASE_DRIVER'),
+            db_driver=getenv("DATABASE_DRIVER"),
             db_host=getenv("DATABASE_HOST"),
-            db_port=getenv('DATABASE_PORT'),
-            db_user=getenv('DATABASE_USERNAME'),
-            db_password=getenv('DATABASE_PASSWORD'),
-            db_database=getenv('DATABASE_NAME'),
-
-            http_host=getenv('HTTP_HOST'),
-            http_port=getenv('HTTP_PORT'),
+            db_port=getenv("DATABASE_PORT"),
+            db_user=getenv("DATABASE_USERNAME"),
+            db_password=getenv("DATABASE_PASSWORD"),
+            db_database=getenv("DATABASE_NAME"),
+            http_host=getenv("HTTP_HOST"),
+            http_port=getenv("HTTP_PORT"),
         )
 
         for name, value in new_params.items():
@@ -53,6 +48,4 @@ class Config:
             setattr(self, name, value)
 
         """ Loading remote gateways configurations from gateways.yml file """
-        self.gateways = yaml.safe_load(
-            open(f"{project_root_dir}/gateways.yml", "r")
-        )
+        self.gateways = yaml.safe_load(open(f"{project_root_dir}/gateways.yml", "r"))

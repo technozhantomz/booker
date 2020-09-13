@@ -18,7 +18,7 @@ def order_from_row(obj) -> OrderDTO:
         from_address=obj.in_tx_from_address,
         amount=obj.in_tx_amount,
         created_at=obj.in_tx_created_at,
-        error=obj['in_tx_error'],
+        error=obj["in_tx_error"],
         confirmations=obj.in_tx_confirmations,
         max_confirmations=obj.in_tx_max_confirmations,
     )
@@ -36,10 +36,7 @@ def order_from_row(obj) -> OrderDTO:
     )
 
     order_dto = OrderDTO(
-        order_id=obj.id,
-        in_tx=in_tx_dto,
-        out_tx=out_tx_dto,
-        order_type=obj.order_type,
+        order_id=obj.id, in_tx=in_tx_dto, out_tx=out_tx_dto, order_type=obj.order_type
     )
 
     return order_dto
@@ -59,18 +56,18 @@ class OrdersProcessor:
 
                     order = order_from_row(row)
 
-                    """ If order_type is DEPOSIT, it means that IN transaction 
+                    """ If order_type is DEPOSIT, it means that IN transaction
                     was completed in NATIVE (for example Ethereum ERC-20 USDT) blockchain,
                     so TARGET (for example bitshares FINTEH.USDT) blockchain needs to process OUT transaction """
                     if order.order_type == OrderType.DEPOSIT:
-                        gw = self.ctx.gateways_clients[row['in_tx_coin']]['target']
+                        gw = self.ctx.gateways_clients[row["in_tx_coin"]]["target"]
 
-                    """ If order_type is WITHDRAWAL, it means that IN transaction 
+                    """ If order_type is WITHDRAWAL, it means that IN transaction
                     was completed in TARGET (for example bitshares FINTEH.USDT) blockchain,
-                    so NATIVE (for example Ethereum ERC-20 USDT) blockchain 
+                    so NATIVE (for example Ethereum ERC-20 USDT) blockchain
                     needs to process OUT transaction """
                     if row.order_type == OrderType.WITHDRAWAL:
-                        gw = self.ctx.gateways_clients[row['in_tx_coin']]['native']
+                        gw = self.ctx.gateways_clients[row["in_tx_coin"]]["native"]
 
                     if gw:
                         log.info(f"{gw}  processing order {order.order_id} starting...")

@@ -11,14 +11,16 @@ from finteh_proto.enums import TxError
 import pytest
 
 
-TEST_TX = TransactionDTO(amount=Decimal('10.1'),
-                         tx_id="some:hash",
-                         coin="USDT",
-                         to_address="one",
-                         from_address="two",
-                         confirmations=0,
-                         max_confirmations=1,
-                         created_at=datetime.datetime.now())
+TEST_TX = TransactionDTO(
+    amount=Decimal("10.1"),
+    tx_id="some:hash",
+    coin="USDT",
+    to_address="one",
+    from_address="two",
+    confirmations=0,
+    max_confirmations=1,
+    created_at=datetime.datetime.now(),
+)
 
 TEST_ORDER = OrderDTO(order_id=str(uuid4()), in_tx=TEST_TX)
 
@@ -47,4 +49,3 @@ async def test_booker_server_and_gateway_client():
     assert updated_tx.is_updated
 
     await server.stop()
-

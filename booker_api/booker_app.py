@@ -32,18 +32,22 @@ class AppContext:
             )
         loop.set_exception_handler(self.ex_handler)
         try:
-            self.db_engine: DBEngine = loop.run_until_complete(create_db_engine(
+            self.db_engine: DBEngine = loop.run_until_complete(
+                create_db_engine(
                     host=self.cfg.db_host,
                     port=self.cfg.db_port,
                     user=self.cfg.db_user,
                     password=self.cfg.db_password,
-                    database=self.cfg.db_database
-                ))
+                    database=self.cfg.db_database,
+                )
+            )
             log.info(f"Database connected to {self.cfg.db_host}:{self.cfg.db_port}")
         except Exception as ex:
             log.warning(f"Unable to connect database: {ex}")
 
-        self.booker_server = BookerServer(ctx=self, host=self.cfg.http_host, port=self.cfg.http_port)
+        self.booker_server = BookerServer(
+            ctx=self, host=self.cfg.http_host, port=self.cfg.http_port
+        )
         loop.run_until_complete(self.booker_server.start())
 
         log.info(f"Booker server started on {self.cfg.http_host}:{self.cfg.http_port}")
@@ -56,7 +60,9 @@ class AppContext:
                 if params:
                     gw_client = BookerSideClient(name, side, self, params[0], params[1])
                     self.gateways_clients[name][side] = gw_client
-                    log.info(f"{name}-{side} client created and ready to connect ws://{params[0]}:{params[1]}/")
+                    log.info(
+                        f"{name}-{side} client created and ready to connect ws://{params[0]}:{params[1]}/"
+                    )
                 else:
                     log.info(f"{name}-{side} client not specified")
 
