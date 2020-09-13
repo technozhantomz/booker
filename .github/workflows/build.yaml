@@ -19,11 +19,11 @@ jobs:
       - name: Create gateways config
         run: cp gateways.yml.example gateways.yml
 
-      - name: Build database container
+      - name: Run postgres container
         run: docker-compose run -d postgres
 
-      - name: Build the stack
-        run: docker-compose up --build -d
+      - name: Build database container
+        run: docker-compose up -d
 
       - name: Run tests
-        run: docker-compose exec -T gateway pipenv run pytest
+        run: docker-compose exec -T booker pipenv run pytest

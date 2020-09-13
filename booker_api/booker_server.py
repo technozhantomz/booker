@@ -36,7 +36,12 @@ class BookerServer(BaseServer):
                                 created_at=datetime.datetime.now())
         out_tx.tx_id = None
 
-        if self.ctx.cfg.gateway_prefix in in_tx.coin:
+        if self.ctx:
+            prefix = self.ctx.cfg.gateway_prefix
+        else:
+            prefix = "FINTEH"
+
+        if prefix in in_tx.coin:
             order_type = OrderType.WITHDRAWAL
         else:
             order_type = OrderType.DEPOSIT

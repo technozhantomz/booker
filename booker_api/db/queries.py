@@ -1,5 +1,5 @@
 from aiopg.sa import SAConnection as SAConn
-from aiopg.sa.giresult import RowProxy
+from aiopg.sa.result import RowProxy
 from sqlalchemy.sql import insert, delete, update, select, join
 import sqlalchemy as sa
 from booker_api.db.models import Tx, Order
