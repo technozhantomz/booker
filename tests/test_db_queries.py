@@ -4,6 +4,7 @@ import datetime
 from uuid import uuid4
 from booker_api.config import Config
 from booker_api.db.queries import *
+from booker_api.db.queries import get_tx_by_tx_id
 from finteh_proto.enums import TxError, OrderType
 
 
@@ -72,7 +73,7 @@ async def test_update_tx():
             out_tx = Tx(
                 id=uuid4(),
                 coin="FINTEH.USDT",
-                # tx_id="some_id2",
+                tx_id=None,
                 from_address="some_sender",
                 to_address="some_receiver",
                 amount=9.99,
@@ -81,20 +82,24 @@ async def test_update_tx():
                 confirmations=0,
                 max_confirmations=1,
             )
-            await insert_tx(conn, tx)
-            await insert_tx(conn, out_tx)
+
             order = Order(
                 id=uuid4(), in_tx=tx.id, out_tx=out_tx.id, order_type=OrderType.DEPOSIT
             )
 
-            await insert_order(conn, order)
+            await safe_insert_order(conn, tx, out_tx, order)
 
             tx.confirmations = 10
+
             await update_tx(conn, tx)
+
+            updated = await get_tx_by_tx_id(conn, tx.tx_id)
 
             await delete_order(conn, order.id)
             await delete_tx(conn, tx.tx_id)
             await delete_tx(conn, out_tx.tx_id)
+
+            assert updated['confirmations'] == 10
 
     except Exception as ex:
         pytest.skip(
@@ -389,3 +394,28 @@ async def test_safe_insert_order():
         await delete_tx(conn, out_tx1.tx_id)
 
         assert r
+
+
+@pytest.mark.asyncio
+async def test_get_tx_by_tx_id():
+    engine = await _get_db_engine()
+
+    async with engine.acquire() as conn:
+        in_tx1 = Tx(
+            id=uuid4(),
+            coin="USDT",
+            tx_id="some_id11",
+            from_address="some_sender",
+            to_address="some_receiver",
+            amount=10.1,
+            created_at=datetime.datetime.now(),
+            error=TxError.NO_ERROR,
+            confirmations=4,
+            max_confirmations=3,
+        )
+        await insert_tx(conn, in_tx1)
+
+        tx = await get_tx_by_tx_id(conn, in_tx1.tx_id)
+        assert tx
+
+        await delete_tx(conn, tx_id=tx.tx_id)

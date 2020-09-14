@@ -16,9 +16,11 @@ async def insert_tx(conn: SAConn, tx: Tx) -> bool:
         return False
 
 
-async def update_tx(conn: SAConn, tx: Tx) -> None:
+async def update_tx(conn: SAConn, tx: Tx):
     _tx = object_as_dict(tx)
-    await conn.execute(update(Tx).values(**_tx).where(Tx.tx_id == tx.tx_id))
+    q = update(Tx).values(**_tx).where(Tx.tx_id == tx.tx_id)
+    print(q)
+    return await conn.execute(q)
 
 
 async def delete_tx(conn: SAConn, tx_id) -> None:
@@ -112,3 +114,8 @@ async def select_orders_to_process(conn: SAConn) -> RowProxy:
         return subs
     else:
         return []
+
+
+async def get_tx_by_tx_id(conn, tx_id):
+    cursor = await conn.execute(select([Tx]).where(Tx.tx_id == tx_id))
+    return await cursor.fetchone()

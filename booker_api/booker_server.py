@@ -8,8 +8,9 @@ from finteh_proto.server import BaseServer
 from finteh_proto.dto import TransactionDTO, OrderDTO, UpdateTxDTO
 from finteh_proto.enums import OrderType
 
-from booker_api.db.queries import safe_insert_order, update_tx
+from booker_api.db.queries import safe_insert_order, update_tx, get_tx_by_tx_id
 from booker_api.db.models import Tx, Order
+from booker_api.config import Config
 
 
 class BookerServer(BaseServer):
@@ -25,7 +26,7 @@ class BookerServer(BaseServer):
         # TODO replace this mock
         out_tx = TransactionDTO(
             amount=in_tx.amount,
-            tx_id="MOCK_OUT_HASH",
+            tx_id=None,
             coin=in_tx.coin,
             to_address=in_tx.coin,
             from_address=in_tx.coin,
@@ -38,7 +39,7 @@ class BookerServer(BaseServer):
         if self.ctx:
             prefix = self.ctx.cfg.gateway_prefix
         else:
-            prefix = "FINTEH"
+            prefix = Config.gateway_prefix
 
         if prefix in in_tx.coin:
             order_type = OrderType.WITHDRAWAL
@@ -71,8 +72,9 @@ class BookerServer(BaseServer):
 
         if self.ctx:
             async with self.ctx.db_engine.acquire() as conn:
-                tx_model = Tx(id=uuid4(), **dataclasses.asdict(tx_dto))
-                await update_tx(conn, tx_model)
+                tx_db_data = await get_tx_by_tx_id(conn, tx_dto.tx_id)
+                tx_model_instance = Tx(id=tx_db_data['id'], **dataclasses.asdict(tx_dto))
+                await update_tx(conn, tx_model_instance)
 
         updated_order = UpdateTxDTO(is_updated=True)
 

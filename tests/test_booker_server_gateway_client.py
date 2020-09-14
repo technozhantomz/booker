@@ -32,6 +32,7 @@ async def test_booker_server_and_gateway_client():
     client = GatewaySideClient()
 
     in_tx = TEST_TX
+
     created_order = await client.create_order_request(in_tx)
 
     assert isinstance(created_order, OrderDTO)
