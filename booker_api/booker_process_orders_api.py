@@ -1,6 +1,6 @@
 import asyncio
 from finteh_proto.utils import get_logger
-from booker_api.db.queries import select_orders_to_process, Order
+from booker_api.db.queries import select_orders_to_process
 from finteh_proto.dto import TransactionDTO, OrderDTO
 
 from finteh_proto.enums import OrderType
@@ -71,6 +71,6 @@ class OrdersProcessor:
 
                     if gw:
                         log.info(f"{gw}  processing order {order.order_id} starting...")
-                        # new_tx = await gw.init_new_tx_request(row)
+                        new_tx = await gw.init_new_tx_request(row)
 
             await asyncio.sleep(1)

@@ -61,10 +61,10 @@ class AppContext:
                     gw_client = BookerSideClient(name, side, self, params[0], params[1])
                     self.gateways_clients[name][side] = gw_client
                     log.info(
-                        f"{name}-{side} client created and ready to connect ws://{params[0]}:{params[1]}/"
+                        f"{side}{name} client created and ready to connect ws://{params[0]}:{params[1]}/"
                     )
                 else:
-                    log.info(f"{name}-{side} client not specified")
+                    log.info(f"{side}{name} client not specified")
 
         self.order_processing = OrdersProcessor(self)
         loop.create_task(self.order_processing.run())

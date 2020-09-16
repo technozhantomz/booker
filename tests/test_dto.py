@@ -36,15 +36,16 @@ def test_dump_tx():
 
 
 def test_dump_order():
-    order = OrderDTO(order_id=str(uuid4()), in_tx=TEST_TX)
+    order = OrderDTO(order_id=uuid4(), in_tx=TEST_TX)
 
     dump = order.to_dump()
 
     assert isinstance(dump, str)
 
     json_resp = json.loads(dump)
-    in_tx = TransactionDTO(**json_resp["in_tx"]).normalize()
-    final_order = OrderDTO(order_id=json_resp["order_id"], in_tx=in_tx)
+    final_order = OrderDTO(
+        order_id=json_resp["order_id"], in_tx=json_resp["in_tx"]
+    ).normalize()
 
     assert isinstance(final_order, OrderDTO)
     assert isinstance(final_order.in_tx, TransactionDTO)

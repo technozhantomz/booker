@@ -19,7 +19,6 @@ async def insert_tx(conn: SAConn, tx: Tx) -> bool:
 async def update_tx(conn: SAConn, tx: Tx):
     _tx = object_as_dict(tx)
     q = update(Tx).values(**_tx).where(Tx.tx_id == tx.tx_id)
-    print(q)
     return await conn.execute(q)
 
 

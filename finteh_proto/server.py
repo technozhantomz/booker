@@ -7,6 +7,7 @@ from aiohttp.web import (
 )
 from aiohttp_json_rpc import JsonRpc
 from aiohttp_json_rpc.communicaton import JsonRpcRequest
+from finteh_proto.dto import JSONRPCResponse
 
 
 class BaseServer(JsonRpc):
@@ -44,3 +45,11 @@ class BaseServer(JsonRpc):
     async def status(self, request: HTTPRequest) -> HTTPResponse:
         """Http health check"""
         return HTTPResponse(text="Ok")
+
+    def jsonrpc_response(self, request, result):
+        if not isinstance(result, Exception):
+            error = None
+        r = JSONRPCResponse(
+            error=error, id=request.msg[1]["id"], result=result.normalize()
+        ).to_dump()
+        return r
