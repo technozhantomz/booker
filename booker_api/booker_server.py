@@ -19,8 +19,7 @@ class BookerServer(BaseServer):
 
     async def create_order(self, request):
         """Receiving new (IN) transaction, creating OUT transaction template and Order"""
-        in_tx_data = json.loads(request.msg[1]["params"])
-        in_tx = TransactionDTO(**in_tx_data).normalize()
+        in_tx = TransactionDTO.Schema().load(request.msg[1]["params"])
 
         # TODO replace this mock
         out_tx = TransactionDTO(
@@ -33,7 +32,6 @@ class BookerServer(BaseServer):
             max_confirmations=1,
             created_at=datetime.datetime.now(),
         )
-        out_tx.tx_id = None
 
         if self.ctx:
             prefix = self.ctx.cfg.exchange_prefix
@@ -64,8 +62,7 @@ class BookerServer(BaseServer):
 
     async def update_tx(self, request):
         """Update existing transaction"""
-        tx_data = json.loads(request.msg[1]["params"])
-        tx_dto = TransactionDTO(**tx_data).normalize()
+        tx_dto = TransactionDTO.Schema().load(request.msg[1]["params"])
 
         if self.ctx:
             async with self.ctx.db_engine.acquire() as conn:

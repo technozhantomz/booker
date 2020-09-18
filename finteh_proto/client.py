@@ -1,5 +1,4 @@
-import json
-
+import dataclasses
 from aiohttp_json_rpc import JsonRpcClient
 from aiohttp_json_rpc.exceptions import RpcError
 
@@ -26,35 +25,33 @@ class BaseClient(JsonRpcClient):
 
     @classmethod
     def safe_call_execute(cls, cli_request):
-        async def process_call(self: BaseClient, *args, **kwargs):
+        async def process_call(self: BaseClient, *args, **kwargs) -> JSONRPCResponse:
             try:
                 await self.connect(self._host, self._port)
 
-                method_name, params, dto_response = await cli_request(
+                method_name, dto_request, dtc_result = await cli_request(
                     self, *args, **kwargs
                 )
-                assert dto_response
                 req = JSONRPCRequest(
-                    method=method_name, params=params.to_dump(), id=str(uuid4())
+                    method=method_name,
+                    id=uuid4(),
+                    params=dto_request.Schema().dump(dto_request),
                 )
+                req_dump = req.Schema().dump(req)
                 log.info(f"Sending request =>> {req}")
-                call = json.loads(await self.call(**req))
 
-                assert bool(call.get("error")) ^ bool(call.get("result"))
-                assert req.id == call["id"]
+                raw_call = await self.call(**req_dump)
+                response_dto = JSONRPCResponse.Schema().load(raw_call)
 
-                if call.get("error"):
-                    result = JSONRPCError(
-                        message=call["error"]["message"], code=call["error"]["code"]
-                    )
+                log.info(f"Receiving response <== {response_dto}")
+
+                assert req.id == response_dto.id
+                assert bool(response_dto.error) ^ bool(response_dto.result)
+
+                if response_dto.error:
+                    result = response_dto.error
                 else:
-                    dto = dto_response(**call["result"])
-                    _result = JSONRPCResponse(
-                        id=call["id"], result=dto.normalize(), error=None
-                    )
-                    result = _result.result
-
-                log.info(f"Receiving request <== {result}")
+                    result = dtc_result.Schema().load(response_dto.result)
 
             except ClientConnectorError as ex:
 

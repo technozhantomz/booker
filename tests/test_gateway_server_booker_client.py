@@ -68,6 +68,6 @@ async def test_booker_client_init_new_tx():
     out_tx = await client.init_new_tx_request(TEST_ORDER)
 
     assert isinstance(out_tx, TransactionDTO)
-    assert out_tx
+    assert out_tx.coin
 
     await server.stop()

@@ -1,3 +1,4 @@
+import dataclasses
 from aiohttp.web import (
     Application,
     TCPSite,
@@ -46,10 +47,15 @@ class BaseServer(JsonRpc):
         """Http health check"""
         return HTTPResponse(text="Ok")
 
-    def jsonrpc_response(self, request, result):
-        if not isinstance(result, Exception):
+    def jsonrpc_response(self, request, result_dto):
+        if not isinstance(result_dto, Exception):
             error = None
-        r = JSONRPCResponse(
-            error=error, id=request.msg[1]["id"], result=result.normalize()
-        ).to_dump()
-        return r
+            result = result_dto
+        else:
+            error = result_dto
+            result = None
+        response = JSONRPCResponse(
+            id=request.msg[1]["id"], result=result.Schema().dump(result), error=error
+        )
+        dump = JSONRPCResponse.Schema().dump(response)
+        return dump

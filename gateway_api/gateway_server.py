@@ -23,25 +23,27 @@ class GatewayServer(BaseServer):
         )
 
     async def init_new_tx(self, request):
-        order_data = json.loads(request.msg[1]["params"])
-        order = OrderDTO(
-            order_id=order_data["order_id"],
-            in_tx=TransactionDTO(**order_data["in_tx"]).normalize(),
-        )
+        order = OrderDTO.Schema().load(request.msg[1]["params"])
 
         # TODO Doing check and broadcast stuff
 
-        out_tx = TransactionDTO(**order_data["in_tx"])
+        out_tx = order.in_tx
         return self.jsonrpc_response(request, out_tx)
 
     async def get_deposit_address(self, request):
-        req_data = json.loads(request.msg[1]["params"])
-        deposit_address_body = DepositAddressDTO(**req_data)
+        # Do not forget to overwrite this method to implement returning real deposit address
+        deposit_address_body = DepositAddressDTO.Schema().load(request.msg[1]["params"])
+        assert deposit_address_body.user
         deposit_address_body.deposit_address = "DEPOSIT ADDRESS"
         return self.jsonrpc_response(request, deposit_address_body)
 
     async def validate_address(self, request):
-        req_data = json.loads(request.msg[1]["params"])
-        validate_address_body = ValidateAddressDTO(**req_data)
+        # Do not forget to overwrite this method to implement gateway side blockchain address validation
+        validate_address_body = ValidateAddressDTO.Schema().load(
+            request.msg[1]["params"]
+        )
+
+        assert validate_address_body.user
         validate_address_body.is_valid = True
+
         return self.jsonrpc_response(request, validate_address_body)

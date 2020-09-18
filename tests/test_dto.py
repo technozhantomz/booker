@@ -1,7 +1,5 @@
-import datetime
 from finteh_proto.dto import *
 from uuid import uuid4
-from finteh_proto.utils import object_as_dict
 
 
 TEST_TX = TransactionDTO(
@@ -13,65 +11,72 @@ TEST_TX = TransactionDTO(
     confirmations=0,
     max_confirmations=1,
     created_at=datetime.datetime.now(),
+    error=TxError.NO_ERROR,
 )
 
 
-def test_dump_tx():
-    start_tx = TEST_TX
-    dump = start_tx.to_dump()
-    assert isinstance(dump, str)
+def test_tx_dto():
+    assert isinstance(TEST_TX, TransactionDTO)
 
-    json_resp = json.loads(dump)
-    final_tx = TransactionDTO(**json_resp)
-    final_tx = final_tx.normalize()
+    dump = TEST_TX.Schema().dump(TEST_TX)
 
-    assert isinstance(final_tx.amount, Decimal) and isinstance(start_tx.amount, Decimal)
-    assert final_tx.amount == start_tx.amount
+    loads = TEST_TX.Schema().load(dump)
 
-    assert type(final_tx.created_at) == type(start_tx.created_at) == datetime.datetime
-    assert final_tx.created_at == start_tx.created_at
-
-    assert type(final_tx.error) == type(start_tx.error) == TxError
-    assert final_tx.error == start_tx.error
+    assert TEST_TX.amount == loads.amount
+    assert TEST_TX.error == loads.error
+    assert type(loads.error) == TxError
 
 
-def test_dump_order():
+def test_order_dto():
     order = OrderDTO(order_id=uuid4(), in_tx=TEST_TX)
+    assert isinstance(order, OrderDTO)
+    assert isinstance(order.in_tx, TransactionDTO)
+    assert isinstance(order.in_tx.error, TxError)
 
-    dump = order.to_dump()
+    dump = order.Schema().dump(order)
 
-    assert isinstance(dump, str)
+    loads = order.Schema().load(dump)
 
-    json_resp = json.loads(dump)
-    final_order = OrderDTO(
-        order_id=json_resp["order_id"], in_tx=json_resp["in_tx"]
-    ).normalize()
-
-    assert isinstance(final_order, OrderDTO)
-    assert isinstance(final_order.in_tx, TransactionDTO)
-    assert final_order.in_tx.amount == TEST_TX.amount
+    assert order.in_tx.amount == loads.in_tx.amount
+    assert isinstance(loads.in_tx, TransactionDTO)
+    assert type(loads.order_type) == type(order.order_type)
 
 
-def test_tx_dto_to_model():
-    from booker_api.db.models import Tx
+def test_jsonrpcrequest_validate_address():
+    v = ValidateAddressDTO(user="test_user", is_valid=True)
+    req = JSONRPCRequest(method="method", id=uuid4(), params=dataclasses.asdict(v))
+    req_dump = req.Schema().dump(req)
 
-    tx_model = Tx(id=uuid4(), **dataclasses.asdict(TEST_TX))
-    assert tx_model.error == TEST_TX.error
-
-
-def test_order_dto_to_model():
-    from booker_api.db.models import Tx, Order
-
-    tx_model = Tx(id=uuid4(), **dataclasses.asdict(TEST_TX))
-    order_model = Order(id=uuid4(), in_tx=tx_model.id)
-    assert order_model.in_tx == tx_model.id
+    req_loads = JSONRPCRequest.Schema().load(req_dump)
+    params_load = ValidateAddressDTO(**req_loads.params)
+    assert isinstance(req_loads, JSONRPCRequest)
+    assert isinstance(params_load, ValidateAddressDTO)
+    assert params_load.is_valid == v.is_valid
 
 
-def test_tx_model_to_dto():
-    from booker_api.db.models import Tx
+def test_jsonrpcresponse_validate_address():
+    v = ValidateAddressDTO(user="test_user", is_valid=True)
+    resp = JSONRPCResponse(id=uuid4(), result=v, error=None)
+    resp_dump = resp.Schema().dump(resp)
 
-    tx_model = Tx(id=uuid4(), **dataclasses.asdict(TEST_TX))
-    model_dict = object_as_dict(tx_model)
-    model_dict.pop("id")
-    new_model = TransactionDTO(**model_dict)
-    assert new_model.error == tx_model.error
+    resp_loads = JSONRPCResponse.Schema().load(resp_dump)
+    result_loads = resp_loads.result
+    assert isinstance(resp_loads, JSONRPCResponse)
+    assert isinstance(result_loads, ValidateAddressDTO)
+    assert result_loads.is_valid == v.is_valid
+
+
+def test_jsonrpcresponse_order():
+
+    o = OrderDTO(order_id=uuid4(), in_tx=TEST_TX, order_type=OrderType.DEPOSIT)
+
+    resp = JSONRPCResponse(id=uuid4(), result=o, error=None)
+
+    resp_dump = resp.Schema().dump(resp)
+
+    resp_loads = JSONRPCResponse.Schema().load(resp_dump)
+    result_loads = resp_loads.result
+    assert isinstance(resp_loads, JSONRPCResponse)
+    assert isinstance(result_loads, OrderDTO)
+    assert resp_loads.result.in_tx == o.in_tx
+    assert resp_loads.result.in_tx.amount == o.in_tx.amount == TEST_TX.amount
