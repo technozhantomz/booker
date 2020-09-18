@@ -29,12 +29,12 @@ class Config:
         load_dotenv()
         new_params = dict(
             exchange_prefix=getenv("EXCHANGE_PREFIX"),
-            db_driver=getenv("DATABASE_DRIVER"),
-            db_host=getenv("DATABASE_HOST"),
-            db_port=getenv("DATABASE_PORT"),
-            db_user=getenv("DATABASE_USERNAME"),
-            db_password=getenv("DATABASE_PASSWORD"),
-            db_database=getenv("DATABASE_NAME"),
+            db_driver=getenv("DB_DRIVER"),
+            db_host=getenv("DB_HOST"),
+            db_port=getenv("DB_PORT"),
+            db_user=getenv("DB_USER"),
+            db_password=getenv("DB_PASSWORD"),
+            db_database=getenv("DB_DATABASE"),
             http_host=getenv("HTTP_HOST"),
             http_port=getenv("HTTP_PORT"),
         )

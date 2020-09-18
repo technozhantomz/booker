@@ -28,8 +28,7 @@ class TestDTOResponse(DataTransferClass):
 class ExampleServer(BaseServer):
     def __init__(self, host="0.0.0.0", port=8080, ctx=None):
         super(ExampleServer, self).__init__(host, port, ctx)
-        self.add_methods(("", self.test_method),
-                         ("",  self.test_server_fail))
+        self.add_methods(("", self.test_method), ("", self.test_server_fail))
         pass
 
     async def test_method(self, request: JsonRpcRequest):
@@ -47,12 +46,7 @@ class ExampleServer(BaseServer):
 
 
 class ExampleClient(BaseClient):
-    def __init__(
-        self,
-        ctx=None,
-        host="0.0.0.0",
-        port=8080,
-    ):
+    def __init__(self, ctx=None, host="0.0.0.0", port=8080):
         super().__init__(ctx, host, port)
 
     @BaseClient.safe_call_execute
@@ -61,7 +55,7 @@ class ExampleClient(BaseClient):
 
     @BaseClient.safe_call_execute
     async def test_client_side_error(self, test_dto):
-        1/0
+        1 / 0
         return "test_method", test_dto, TestDTOResponse
 
     @BaseClient.safe_call_execute
@@ -75,7 +69,9 @@ async def test_jsonrpc_request_success():
     await s.start()
     c = ExampleClient()
 
-    start_dto = TestDTORequest(test_uuid=uuid4(), test_internal_dto=TestInternalDTO(test_amount=10))
+    start_dto = TestDTORequest(
+        test_uuid=uuid4(), test_internal_dto=TestInternalDTO(test_amount=10)
+    )
 
     r = await c.test_request(start_dto)
     assert isinstance(r, TestDTOResponse)
@@ -89,12 +85,14 @@ async def test_jsonrpc_client_error():
     await s.start()
     c = ExampleClient()
 
-    start_dto = TestDTORequest(test_uuid=uuid4(), test_internal_dto=TestInternalDTO(test_amount=10))
+    start_dto = TestDTORequest(
+        test_uuid=uuid4(), test_internal_dto=TestInternalDTO(test_amount=10)
+    )
 
     r = await c.test_client_side_error(start_dto)
     print(r)
     assert isinstance(r, JSONRPCError)
-    assert r.message == 'division by zero'
+    assert r.message == "division by zero"
 
     await s.stop()
 
@@ -105,11 +103,13 @@ async def test_jsonrpc_server_error():
     await s.start()
     c = ExampleClient()
 
-    start_dto = TestDTORequest(test_uuid=uuid4(), test_internal_dto=TestInternalDTO(test_amount=10))
+    start_dto = TestDTORequest(
+        test_uuid=uuid4(), test_internal_dto=TestInternalDTO(test_amount=10)
+    )
 
     r = await c.test_server_fail_request(start_dto)
     assert isinstance(r, JSONRPCError)
-    assert r.message == 'Internal Error'
+    assert r.message == "Internal Error"
     assert r.code == -32603
 
     await s.stop()

@@ -27,12 +27,12 @@ fileConfig(config.config_file_name)
 section = config.config_ini_section
 
 db_environment_keys = {
-    "DATABASE_DRIVER",
-    "DATABASE_HOST",
-    "DATABASE_PORT",
-    "DATABASE_USERNAME",
-    "DATABASE_PASSWORD",
-    "DATABASE_NAME",
+    "DB_DRIVER",
+    "DB_HOST",
+    "DB_PORT",
+    "DB_USER",
+    "DB_PASSWORD",
+    "DB_DATABASE",
 }
 
 for db_environment_key in db_environment_keys:
