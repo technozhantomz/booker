@@ -28,7 +28,7 @@ class BaseServer(JsonRpc):
         self.add_methods(("", self.ping))
 
     async def start(self):
-        self.app.router.add_route("*", "/", self.handle_request)
+        self.app.router.add_route("*", "/ws-rpc", self.handle_request)
         self.app.router.add_route("*", "/status", self.status)
         self.runner = AppRunner(self.app)
         await self.runner.setup()

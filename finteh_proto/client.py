@@ -12,11 +12,12 @@ log = get_logger("JsonRpcClient")
 
 
 class BaseClient(JsonRpcClient):
-    def __init__(self, ctx=None, host="0.0.0.0", port=8080):
+    def __init__(self, ctx=None, host="0.0.0.0", port=8080, ws_rpc_endpoint="/ws-rpc"):
         super().__init__()
         self.ctx = ctx
         self._host = host
         self._port = port
+        self.ws_rpc_endpoint = ws_rpc_endpoint
 
     async def ping(self):
         """Just RPC string ping-pong"""
@@ -27,7 +28,7 @@ class BaseClient(JsonRpcClient):
     def safe_call_execute(cls, cli_request):
         async def process_call(self: BaseClient, *args, **kwargs) -> JSONRPCResponse:
             try:
-                await self.connect(self._host, self._port)
+                await self.connect(self._host, self._port, self.ws_rpc_endpoint)
 
                 method_name, dto_request, dtc_result = await cli_request(
                     self, *args, **kwargs
