@@ -1,5 +1,7 @@
 [![License]][LICENSE.md]
 [![Telegram]][Teletram join]
+![build](https://github.com/fincubator/booker/workflows/build/badge.svg)
+![pre-commit](https://github.com/fincubator/booker/workflows/pre-commit/badge.svg)
 [![Code style: black]][black code style]
 
 --------------------------------------------------------------------------------
@@ -12,18 +14,24 @@ gateways.
 * [Docker Compose] (1.25.4 tested)
 
 # Installation in Docker
-1. Install git, Docker, Docker Compose:
+Install git, Docker, Docker Compose:
 ```bash
 sudo apt install git docker.io docker-compose
 ```
-2. Clone the repository:
+Clone the repository:
 ```bash
 git clone https://github.com/fincubator/booker
 cd booker
 ```
-3. Start the services by running the command:
+Create configuration files from examples and fill it with your data
 ```bash
-sudo docker-compose -f docker/docker-compose.yml up
+cp .env.example .env
+cp gateways.yml.example gateways.yml
+```
+
+Start the services by running the command:
+```bash
+sudo docker-compose up
 ```
 
 # Contributing
