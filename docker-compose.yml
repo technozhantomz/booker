@@ -33,7 +33,7 @@ services:
       bash -c "pipenv run alembic upgrade head
       && pipenv run python . "
     ports:
-      - ${HTTP_PORT}:${HTTP_PORT}
+      - '${HTTP_PORT_HOST}:${HTTP_PORT}'
     expose:
       - "${HTTP_PORT}"
     depends_on:
