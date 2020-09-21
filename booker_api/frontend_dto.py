@@ -11,6 +11,7 @@ from finteh_proto.enums import OrderType, TxError
 class NewInOrder(DataTransferClass):
     """Create a new inbound order.
     """
+
     in_tx_coin: str
     in_tx_amount: Amount
     out_tx_coin: str
@@ -21,6 +22,7 @@ class NewInOrder(DataTransferClass):
 class InOrder(DataTransferClass):
     """Created a new inbound order.
     """
+
     order_id: UUID
     in_tx_to: str
 

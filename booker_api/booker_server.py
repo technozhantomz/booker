@@ -18,16 +18,22 @@ from booker_api.db.queries import (
     update_tx,
     get_tx_by_tx_id,
     select_order_by_id,
+    insert_order,
 )
 from booker_api.db.models import Tx, Order
-from booker_api.frontend_dto import Order as FrontendOrderDTO
+from booker_api.frontend_dto import (
+    Order as FrontendOrderDTO,
+    NewInOrder as FrontendNewInOrderDTO,
+    InOrder as FrontendInOrderDTO,
+)
 from booker_api.config import Config
 
 
 class BookerServer(BaseServer):
     def __init__(self, host="0.0.0.0", port=8080, ctx=None):
         super(BookerServer, self).__init__(host, port, ctx)
-        self.app.router.add_route("*", "/get_order", self.get_order)
+        self.app.router.add_route("GET", "/orders/get_order", self.get_order)
+        self.app.router.add_route("POST", "/orders/new_in_order", self.new_in_order)
         self.add_methods(("", self.create_order), ("", self.update_tx))
 
     async def create_order(self, request):
@@ -90,6 +96,7 @@ class BookerServer(BaseServer):
         return self.jsonrpc_response(request, updated_tx)
 
     async def get_order(self, request: HTTPRequest) -> HTTPResponse:
+        """Get order object by frontend request with http"""
         if not self.ctx:
             return http_json_response({"error": "Booker App is not run"})
         if not request.query.get("order_id"):
@@ -109,3 +116,21 @@ class BookerServer(BaseServer):
         order_dto = FrontendOrderDTO(**order)
         order_dto = order_dto.Schema().dump(order_dto)
         return http_json_response(order_dto)
+
+    async def new_in_order(self, request: HTTPRequest) -> HTTPResponse:
+        request_payload = await request.json()
+
+        # new_order_schema = FrontendInOrderDTO.Schema()
+        # new_order = new_order_schema.load(request_payload)
+        # todo fix this mock
+
+        order = Order(id=uuid4(), order_type=OrderType.TRASH)
+
+        async with self.ctx.db_engine.acquire() as conn:
+            await insert_order(conn, order)
+
+        order_dto = FrontendInOrderDTO(order_id=order.id, in_tx_to="MOCK")
+        rs_payload = order_dto.Schema().dump(order_dto)
+        response = http_json_response(rs_payload)
+
+        return response
