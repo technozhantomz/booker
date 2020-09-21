@@ -458,7 +458,9 @@ async def test_get_order_by_tx_id():
             id=uuid4(), in_tx=in_tx1.id, out_tx=out_tx1.id, order_type=OrderType.DEPOSIT
         )
 
-        await safe_insert_order(conn, in_tx1, out_tx1, order1)
+        safe_insert = await safe_insert_order(conn, in_tx1, out_tx1, order1)
+
+        assert safe_insert
 
         order_db_instance = await select_order_by_id(conn, order1.id)
 

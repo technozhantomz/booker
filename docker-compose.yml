@@ -3,7 +3,7 @@ version: '3.2'
 services:
 
   postgres:
-      image: postgres:12.3-alpine
+      image: postgres:10
       container_name: booker_postgres
       volumes:
         - "/var/run/postgres/postgres.sock:/var/run/postgres/postgres.sock"

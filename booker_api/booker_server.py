@@ -11,7 +11,8 @@ from aiohttp.web import (
 
 from finteh_proto.server import BaseServer
 from finteh_proto.dto import TransactionDTO, OrderDTO, UpdateTxDTO, DepositAddressDTO
-from finteh_proto.enums import OrderType
+from finteh_proto.enums import OrderType, TxError
+from finteh_proto.utils import get_logger
 
 from booker_api.db.queries import (
     safe_insert_order,
@@ -27,6 +28,8 @@ from booker_api.frontend_dto import (
     InOrder as FrontendInOrderDTO,
 )
 from booker_api.config import Config
+
+log = get_logger("Booker Server")
 
 
 class BookerServer(BaseServer):
@@ -118,18 +121,67 @@ class BookerServer(BaseServer):
         return http_json_response(order_dto)
 
     async def new_in_order(self, request: HTTPRequest) -> HTTPResponse:
+        """Create (empty) order object by frontend request with http"""
+        if not self.ctx:
+            return http_json_response({"error": "Booker App is not run"})
+
         request_payload = await request.json()
+        new_order = FrontendNewInOrderDTO(**request_payload)
 
-        # new_order_schema = FrontendInOrderDTO.Schema()
-        # new_order = new_order_schema.load(request_payload)
-        # todo fix this mock
+        if self.ctx.cfg.exchange_prefix in new_order.in_tx_coin:
+            client_name = new_order.out_tx_coin
+            client_side = "target"
+            order_type = OrderType.WITHDRAWAL
 
-        order = Order(id=uuid4(), order_type=OrderType.TRASH)
+        elif self.ctx.cfg.exchange_prefix in new_order.out_tx_coin:
+            client_name = new_order.in_tx_coin
+            client_side = "native"
+            order_type = OrderType.DEPOSIT
+        else:
+            return http_json_response({"error": "Bad order params"})
+
+        try:
+            client = self.ctx.gateways_clients[client_name][client_side]
+        except KeyError:
+            return http_json_response(
+                {
+                    "error": f"{client_name}-{client_side} gateway client is not available now"
+                }
+            )
+
+        in_tx = Tx(
+            id=uuid4(),
+            coin=new_order.in_tx_coin,
+            to_address=new_order.out_tx_to,
+            amount=new_order.in_tx_amount,
+            created_at=datetime.datetime.now(),
+            error=TxError.NO_ERROR,
+            confirmations=0,
+            max_confirmations=0,
+        )
+
+        out_tx = Tx(
+            id=uuid4(),
+            coin=new_order.out_tx_coin,
+            to_address=new_order.out_tx_to,
+            amount=0,
+            created_at=datetime.datetime.now(),
+            error=TxError.NO_ERROR,
+            confirmations=0,
+            max_confirmations=0,
+        )
+
+        order = Order(
+            id=uuid4(), in_tx=in_tx.id, out_tx=out_tx.id, order_type=order_type
+        )
 
         async with self.ctx.db_engine.acquire() as conn:
-            await insert_order(conn, order)
+            insert = await safe_insert_order(conn, in_tx, out_tx, order)
+            if not insert:
+                return http_json_response({"error": "Unable to create order now"})
+            log.info(f"Order {order.id} created")
 
-        order_dto = FrontendInOrderDTO(order_id=order.id, in_tx_to="MOCK")
+        order_dto = FrontendInOrderDTO(order_id=order.id)
         rs_payload = order_dto.Schema().dump(order_dto)
         response = http_json_response(rs_payload)
 

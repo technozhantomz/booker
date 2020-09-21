@@ -20,11 +20,11 @@ class NewInOrder(DataTransferClass):
 
 @dataclass
 class InOrder(DataTransferClass):
-    """Created a new inbound order.
+    """Created inbound order.
     """
 
     order_id: UUID
-    in_tx_to: str
+    in_tx_to: str = None
 
 
 @dataclass

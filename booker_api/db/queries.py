@@ -4,7 +4,10 @@ from sqlalchemy.sql import insert, delete, update, select, join
 import sqlalchemy as sa
 from booker_api.db.models import Tx, Order
 from finteh_proto.enums import OrderType, TxError
-from finteh_proto.utils import object_as_dict
+from finteh_proto.utils import object_as_dict, get_logger
+
+
+log = get_logger("Database Engine")
 
 
 async def insert_tx(conn: SAConn, tx: Tx) -> bool:
@@ -46,6 +49,7 @@ async def safe_insert_order(conn: SAConn, in_tx: Tx, out_tx: Tx, order: Order):
             assert _order_res
             return True
         except Exception as ex:
+            log.info(f"Serialization inserting order {order.id} fail: {ex}")
             return False
 
 
@@ -74,6 +78,7 @@ async def select_orders_to_process(conn: SAConn) -> RowProxy:
         (Order.order_type != OrderType.TRASH)
         & (in_tx.c.error == TxError.NO_ERROR)
         & (in_tx.c.confirmations >= in_tx.c.max_confirmations)
+        & (in_tx.c.max_confirmations > 0)
         & (out_tx.c.tx_id == None)
     )
 

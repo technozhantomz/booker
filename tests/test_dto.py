@@ -1,4 +1,18 @@
-from finteh_proto.dto import *
+from decimal import Decimal
+import datetime
+import dataclasses
+
+from finteh_proto.dto import (
+    TransactionDTO,
+    OrderDTO,
+    JSONRPCRequest,
+    JSONRPCResponse,
+    JSONRPCError,
+    ValidateAddressDTO,
+    DepositAddressDTO,
+)
+from finteh_proto.enums import TxError, OrderType
+from booker_api.frontend_dto import NewInOrder, InOrder, Order as FrontendOrderDTO
 from uuid import uuid4
 
 
@@ -80,3 +94,14 @@ def test_jsonrpcresponse_order():
     assert isinstance(result_loads, OrderDTO)
     assert resp_loads.result.in_tx == o.in_tx
     assert resp_loads.result.in_tx.amount == o.in_tx.amount == TEST_TX.amount
+
+
+def test_frontend_dto():
+    new_in_order_data = {
+        "in_tx_coin": "Some_coin",
+        "in_tx_amount": 0,
+        "out_tx_coin": "FINTEH.coin",
+        "out_tx_to": "Some_address",
+    }
+
+    new_in_order = NewInOrder(**new_in_order_data)

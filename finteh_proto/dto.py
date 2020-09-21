@@ -36,9 +36,9 @@ Amount = MarshmallowNewType("Amount", Decimal, field=amount_field)
 @dataclass
 class TransactionDTO(DataTransferClass):
     coin: str
-    to_address: str
-    from_address: str
     amount: Amount
+    to_address: str = None
+    from_address: str = None
     created_at: datetime.datetime = datetime.datetime.now()
     error: TxError = TxError.NO_ERROR
     tx_id: str = None

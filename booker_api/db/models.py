@@ -14,8 +14,8 @@ class Tx(Base):
     id = sa.Column(sa_utils.UUIDType, primary_key=True)
     coin = sa.Column(sa.String, nullable=False)
     tx_id = sa.Column(sa.String)
-    from_address = sa.Column(sa.String)
-    to_address = sa.Column(sa.String)
+    from_address = sa.Column(sa.String, nullable=True)
+    to_address = sa.Column(sa.String, nullable=True)
     amount = sa.Column(sa.Numeric(78, 36), nullable=False, server_default="0.0")
     created_at = sa.Column(
         sa.DateTime, nullable=False, server_default=sa.func.current_timestamp()
