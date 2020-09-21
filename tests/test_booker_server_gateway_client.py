@@ -1,10 +1,7 @@
-import datetime
 from uuid import uuid4
 
 from booker_api.booker_server import BookerServer
-
 from gateway_api.gateway_side_client import GatewaySideClient
-
 from finteh_proto.dto import *
 from finteh_proto.enums import TxError
 

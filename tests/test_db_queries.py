@@ -419,3 +419,54 @@ async def test_get_tx_by_tx_id():
         assert tx
 
         await delete_tx(conn, tx_id=tx.tx_id)
+
+
+@pytest.mark.asyncio
+async def test_get_order_by_tx_id():
+    from booker_api.frontend_dto import Order as FrontendOrder
+
+    engine = await _get_db_engine()
+
+    async with engine.acquire() as conn:
+        in_tx1 = Tx(
+            id=uuid4(),
+            coin="USDT",
+            tx_id="some_id11",
+            from_address="some_sender",
+            to_address="some_receiver",
+            amount=10.1,
+            created_at=datetime.datetime.now(),
+            error=TxError.NO_ERROR,
+            confirmations=4,
+            max_confirmations=3,
+        )
+
+        out_tx1 = Tx(
+            id=uuid4(),
+            coin="FINTEH.USDT",
+            tx_id="some_id2",
+            from_address="some_sender",
+            to_address="some_receiver",
+            amount=9.99,
+            created_at=datetime.datetime.now(),
+            error=TxError.NO_ERROR,
+            confirmations=3,
+            max_confirmations=3,
+        )
+
+        order1 = Order(
+            id=uuid4(), in_tx=in_tx1.id, out_tx=out_tx1.id, order_type=OrderType.DEPOSIT
+        )
+
+        await safe_insert_order(conn, in_tx1, out_tx1, order1)
+
+        order_db_instance = await select_order_by_id(conn, order1.id)
+
+        await delete_order(conn, order1.id)
+
+        await delete_tx(conn, in_tx1.tx_id)
+        await delete_tx(conn, out_tx1.tx_id)
+
+        assert order_db_instance
+
+        o = FrontendOrder(**order_db_instance)

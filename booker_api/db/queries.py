@@ -107,10 +107,10 @@ async def select_orders_to_process(conn: SAConn) -> RowProxy:
         .where(where)
     )
     cursor = await conn.execute(q)
-    subs = await cursor.fetchall()
+    orders = await cursor.fetchall()
 
-    if subs:
-        return subs
+    if orders:
+        return orders
     else:
         return []
 
@@ -118,3 +118,44 @@ async def select_orders_to_process(conn: SAConn) -> RowProxy:
 async def get_tx_by_tx_id(conn, tx_id):
     cursor = await conn.execute(select([Tx]).where(Tx.tx_id == tx_id))
     return await cursor.fetchone()
+
+
+async def select_order_by_id(conn, order_id):
+    in_tx = sa.alias(Tx, name="in_tx")
+    out_tx = sa.alias(Tx, name="out_tx")
+    j_in = join(Order, in_tx, Order.in_tx == in_tx.c.id.label(name="in_tx_id"))
+    j_out = join(j_in, out_tx, Order.out_tx == out_tx.c.id.label(name="out_tx_id"))
+
+    where = Order.id == order_id
+
+    q = (
+        select(
+            [
+                Order.order_type,
+                in_tx.c.coin.label("in_tx_coin"),
+                in_tx.c.tx_id.label("in_tx_hash"),
+                in_tx.c.from_address.label("in_tx_from"),
+                in_tx.c.to_address.label("in_tx_to"),
+                in_tx.c.amount.label("in_tx_amount"),
+                in_tx.c.created_at.label("in_tx_created_at"),
+                in_tx.c.error.label("in_tx_error"),
+                in_tx.c.confirmations.label("in_tx_confirmations"),
+                in_tx.c.max_confirmations.label("in_tx_max_confirmations"),
+                out_tx.c.coin.label("out_tx_coin"),
+                out_tx.c.tx_id.label("out_tx_hash"),
+                out_tx.c.from_address.label("out_tx_from"),
+                out_tx.c.to_address.label("out_tx_to"),
+                out_tx.c.amount.label("out_tx_amount"),
+                out_tx.c.created_at.label("out_tx_created_at"),
+                out_tx.c.error.label("out_tx_error"),
+                out_tx.c.confirmations.label("out_tx_confirmations"),
+                out_tx.c.max_confirmations.label("out_tx_max_confirmations"),
+            ]
+        )
+        .select_from(j_in)
+        .select_from(j_out)
+        .where(where)
+    )
+    cursor = await conn.execute(q)
+    order = await cursor.fetchone()
+    return order

@@ -1,20 +1,33 @@
 import json
-from uuid import uuid4
+from uuid import uuid4, UUID
 import dataclasses
 import datetime
 
+from aiohttp.web import (
+    Request as HTTPRequest,
+    Response as HTTPResponse,
+    json_response as http_json_response,
+)
+
 from finteh_proto.server import BaseServer
-from finteh_proto.dto import TransactionDTO, OrderDTO, UpdateTxDTO
+from finteh_proto.dto import TransactionDTO, OrderDTO, UpdateTxDTO, DepositAddressDTO
 from finteh_proto.enums import OrderType
 
-from booker_api.db.queries import safe_insert_order, update_tx, get_tx_by_tx_id
+from booker_api.db.queries import (
+    safe_insert_order,
+    update_tx,
+    get_tx_by_tx_id,
+    select_order_by_id,
+)
 from booker_api.db.models import Tx, Order
+from booker_api.frontend_dto import Order as FrontendOrderDTO
 from booker_api.config import Config
 
 
 class BookerServer(BaseServer):
     def __init__(self, host="0.0.0.0", port=8080, ctx=None):
         super(BookerServer, self).__init__(host, port, ctx)
+        self.app.router.add_route("*", "/get_order", self.get_order)
         self.add_methods(("", self.create_order), ("", self.update_tx))
 
     async def create_order(self, request):
@@ -75,3 +88,24 @@ class BookerServer(BaseServer):
         updated_tx = UpdateTxDTO(is_updated=True)
 
         return self.jsonrpc_response(request, updated_tx)
+
+    async def get_order(self, request: HTTPRequest) -> HTTPResponse:
+        if not self.ctx:
+            return http_json_response({"error": "Booker App is not run"})
+        if not request.query.get("order_id"):
+            return http_json_response({"error": "Order_id is not specified"})
+        order_id = request.query["order_id"]
+        try:
+            UUID(order_id)
+        except Exception as ex:
+            return http_json_response({"error": f"Order_id has wrong format: {ex}"})
+
+        async with self.ctx.db_engine.acquire() as conn:
+            order = await select_order_by_id(conn, order_id)
+
+        if not order:
+            return http_json_response({"error": f"There is no order {order_id}"})
+
+        order_dto = FrontendOrderDTO(**order)
+        order_dto = order_dto.Schema().dump(order_dto)
+        return http_json_response(order_dto)
