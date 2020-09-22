@@ -15,7 +15,7 @@ class NewInOrder(DataTransferClass):
     in_tx_coin: str
     in_tx_amount: Amount
     out_tx_coin: str
-    out_tx_to: Optional[str] = None
+    out_tx_to: str
 
 
 @dataclass

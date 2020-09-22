@@ -1,8 +1,6 @@
 import datetime
 from uuid import uuid4
 
-import aiohttp
-
 from booker_api.booker_server import BookerServer
 from gateway_api.gateway_side_client import GatewaySideClient
 from finteh_proto.dto import *
@@ -41,12 +39,12 @@ async def test_booker_server_and_gateway_client():
     assert isinstance(created_order.in_tx.amount, Decimal)
     assert created_order.in_tx.amount == TEST_TX.amount
 
-    in_tx.confirmations = 1
-    assert in_tx.confirmations == 1
+    created_order.in_tx.confirmations = 1
+    assert created_order.in_tx.confirmations == 1
 
-    updated_tx = await client.update_tx_request(TEST_TX)
+    updated_tx = await client.update_order_request(created_order)
 
-    assert isinstance(updated_tx, UpdateTxDTO)
+    assert isinstance(updated_tx, UpdateOrderDTO)
     assert updated_tx.is_updated
 
     await server.stop()

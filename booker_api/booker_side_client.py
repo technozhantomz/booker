@@ -4,6 +4,8 @@ from finteh_proto.dto import (
     DepositAddressDTO,
     ValidateAddressDTO,
     TransactionDTO,
+    CreatedEmptyOrderDTO,
+    EmptyOrderDTO,
 )
 
 
@@ -42,3 +44,8 @@ class BookerSideClient(BaseClient):
     @BaseClient.safe_call_execute
     async def validate_address_request(self, user_address: ValidateAddressDTO) -> tuple:
         return "validate_address", user_address, ValidateAddressDTO
+
+    @BaseClient.safe_call_execute
+    async def create_empty_order_request(self, order: EmptyOrderDTO):
+        # TODO replace this mock
+        return "create_empty_order", order, CreatedEmptyOrderDTO

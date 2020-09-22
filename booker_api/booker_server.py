@@ -10,16 +10,22 @@ from aiohttp.web import (
 )
 
 from finteh_proto.server import BaseServer
-from finteh_proto.dto import TransactionDTO, OrderDTO, UpdateTxDTO, DepositAddressDTO
+from finteh_proto.dto import (
+    TransactionDTO,
+    OrderDTO,
+    UpdateOrderDTO,
+    DepositAddressDTO,
+    JSONRPCError,
+    EmptyTransactionDTO,
+    EmptyOrderDTO,
+)
 from finteh_proto.enums import OrderType, TxError
 from finteh_proto.utils import get_logger
 
 from booker_api.db.queries import (
     safe_insert_order,
-    update_tx,
-    get_tx_by_tx_id,
+    safe_update_order,
     select_order_by_id,
-    insert_order,
 )
 from booker_api.db.models import Tx, Order
 from booker_api.frontend_dto import (
@@ -37,7 +43,7 @@ class BookerServer(BaseServer):
         super(BookerServer, self).__init__(host, port, ctx)
         self.app.router.add_route("GET", "/orders/get_order", self.get_order)
         self.app.router.add_route("POST", "/orders/new_in_order", self.new_in_order)
-        self.add_methods(("", self.create_order), ("", self.update_tx))
+        self.add_methods(("", self.create_order), ("", self.update_order))
 
     async def create_order(self, request):
         """Receiving new (IN) transaction, creating OUT transaction template and Order"""
@@ -64,6 +70,7 @@ class BookerServer(BaseServer):
             order_type = OrderType.WITHDRAWAL
         else:
             order_type = OrderType.DEPOSIT
+
         order = OrderDTO(
             order_id=uuid4(), in_tx=in_tx, out_tx=out_tx, order_type=order_type
         )
@@ -82,19 +89,15 @@ class BookerServer(BaseServer):
 
         return self.jsonrpc_response(request, order)
 
-    async def update_tx(self, request):
+    async def update_order(self, request):
         """Update existing transaction"""
-        tx_dto = TransactionDTO.Schema().load(request.msg[1]["params"])
+        order_dto = OrderDTO.Schema().load(request.msg[1]["params"])
 
         if self.ctx:
             async with self.ctx.db_engine.acquire() as conn:
-                tx_db_data = await get_tx_by_tx_id(conn, tx_dto.tx_id)
-                tx_model_instance = Tx(
-                    id=tx_db_data["id"], **dataclasses.asdict(tx_dto)
-                )
-                await update_tx(conn, tx_model_instance)
+                await safe_update_order(conn, order_dto)
 
-        updated_tx = UpdateTxDTO(is_updated=True)
+        updated_tx = UpdateOrderDTO(is_updated=True)
 
         return self.jsonrpc_response(request, updated_tx)
 
@@ -129,25 +132,24 @@ class BookerServer(BaseServer):
         new_order = FrontendNewInOrderDTO(**request_payload)
 
         if self.ctx.cfg.exchange_prefix in new_order.in_tx_coin:
-            client_name = new_order.out_tx_coin
-            client_side = "target"
-            order_type = OrderType.WITHDRAWAL
+            return http_json_response(
+                {"error": "You can not create withdrawal order with http"}
+            )
 
-        elif self.ctx.cfg.exchange_prefix in new_order.out_tx_coin:
-            client_name = new_order.in_tx_coin
-            client_side = "native"
-            order_type = OrderType.DEPOSIT
-        else:
-            return http_json_response({"error": "Bad order params"})
+        assert self.ctx.cfg.exchange_prefix in new_order.out_tx_coin
+        client_name = new_order.in_tx_coin
+        order_type = OrderType.DEPOSIT
 
         try:
-            client = self.ctx.gateways_clients[client_name][client_side]
+            client = self.ctx.gateways_clients[client_name]["native"]
         except KeyError:
             return http_json_response(
-                {
-                    "error": f"{client_name}-{client_side} gateway client is not available now"
-                }
+                {"error": f"Native{client_name} gateway client is not available now"}
             )
+
+        deposit_address = await client.get_deposit_address_request(
+            DepositAddressDTO(user=new_order.out_tx_to)
+        )
 
         in_tx = Tx(
             id=uuid4(),
@@ -179,9 +181,30 @@ class BookerServer(BaseServer):
             insert = await safe_insert_order(conn, in_tx, out_tx, order)
             if not insert:
                 return http_json_response({"error": "Unable to create order now"})
-            log.info(f"Order {order.id} created")
 
-        order_dto = FrontendInOrderDTO(order_id=order.id)
+        log.info(f"Order {order.id} created")
+
+        in_tx_dto = EmptyTransactionDTO(coin=in_tx.coin, to_address=in_tx.to_address)
+
+        out_tx_dto = EmptyTransactionDTO(coin=out_tx.coin, to_address=out_tx.to_address)
+
+        order_dto = EmptyOrderDTO(order_id=order.id, in_tx=in_tx_dto, out_tx=out_tx_dto)
+
+        notify = await client.create_empty_order_request(order_dto)
+
+        if not isinstance(notify, JSONRPCError):
+            log.info(
+                f"Successfully copy order {order_dto.order_id} to native{client_name} gateway"
+            )
+        else:
+            log.info(
+                f"Unable to copy order {order_dto.order_id} to native{client_name} gateway: {notify.message}"
+            )
+
+        order_dto = FrontendInOrderDTO(
+            order_id=order.id, in_tx_to=deposit_address.deposit_address
+        )
+
         rs_payload = order_dto.Schema().dump(order_dto)
         response = http_json_response(rs_payload)
 

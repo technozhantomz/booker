@@ -1,5 +1,5 @@
 from finteh_proto.client import BaseClient
-from finteh_proto.dto import TransactionDTO, OrderDTO, UpdateTxDTO
+from finteh_proto.dto import TransactionDTO, OrderDTO, UpdateOrderDTO
 
 
 class GatewaySideClient(BaseClient):
@@ -18,7 +18,7 @@ class GatewaySideClient(BaseClient):
         return "create_order", tx, OrderDTO
 
     @BaseClient.safe_call_execute
-    async def update_tx_request(self, tx: TransactionDTO) -> tuple:
+    async def update_order_request(self, order: OrderDTO) -> tuple:
         """Requesting remote Booker instance to update existing transaction.
         Booker will check new params, update database and response"""
-        return "update_tx", tx, UpdateTxDTO
+        return "update_order", order, UpdateOrderDTO

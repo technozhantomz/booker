@@ -34,6 +34,11 @@ Amount = MarshmallowNewType("Amount", Decimal, field=amount_field)
 
 
 @dataclass
+class CreatedEmptyOrderDTO(DataTransferClass):
+    created: bool = False
+
+
+@dataclass
 class TransactionDTO(DataTransferClass):
     coin: str
     amount: Amount
@@ -67,7 +72,7 @@ class ValidateAddressDTO(DataTransferClass):
 
 
 @dataclass
-class UpdateTxDTO(DataTransferClass):
+class UpdateOrderDTO(DataTransferClass):
     is_updated: bool = False
 
 
@@ -90,3 +95,17 @@ class JSONRPCRequest(DataTransferClass):
     id: UUID
     method: str
     params: Optional[Any]
+
+
+@dataclass
+class EmptyTransactionDTO(DataTransferClass):
+    coin: str
+    to_address: str
+
+
+@dataclass
+class EmptyOrderDTO(DataTransferClass):
+    order_id: UUID
+    in_tx: EmptyTransactionDTO
+    out_tx: EmptyTransactionDTO
+    order_type: OrderType = OrderType.DEPOSIT

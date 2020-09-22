@@ -42,17 +42,23 @@ class BaseClient(JsonRpcClient):
                 log.info(f"Sending request =>> {req}")
 
                 raw_call = await self.call(**req_dump)
-                response_dto = JSONRPCResponse.Schema().load(raw_call)
+                log.info(f"Receiving response <== {raw_call}")
 
-                log.info(f"Receiving response <== {response_dto}")
+                if "id" in raw_call.keys():
+                    """Process response from finteh-proto based WSRPCServer"""
+                    response_dto = JSONRPCResponse.Schema().load(raw_call)
 
-                assert req.id == response_dto.id
-                assert bool(response_dto.error) ^ bool(response_dto.result)
+                    assert req.id == response_dto.id
+                    assert bool(response_dto.error) ^ bool(response_dto.result)
 
-                if response_dto.error:
-                    result = response_dto.error
+                    if response_dto.error:
+                        result = response_dto.error
+                    else:
+                        result = dtc_result.Schema().load(response_dto.result)
+
                 else:
-                    result = dtc_result.Schema().load(response_dto.result)
+                    """Process response from other Server"""
+                    result = dtc_result.Schema().load(raw_call)
 
             except ClientConnectorError as ex:
 

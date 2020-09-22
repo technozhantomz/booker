@@ -5,6 +5,7 @@ import json
 
 from finteh_proto.server import BaseServer
 from finteh_proto.dto import (
+    CreatedEmptyOrderDTO,
     TransactionDTO,
     OrderDTO,
     DepositAddressDTO,
@@ -20,6 +21,7 @@ class GatewayServer(BaseServer):
             ("", self.validate_address),
             ("", self.get_deposit_address),
             ("", self.init_new_tx),
+            ("", self.create_empty_order),
         )
 
     async def init_new_tx(self, request):
@@ -47,3 +49,6 @@ class GatewayServer(BaseServer):
         validate_address_body.is_valid = True
 
         return self.jsonrpc_response(request, validate_address_body)
+
+    async def create_empty_order(self, request):
+        return self.jsonrpc_response(request, CreatedEmptyOrderDTO(created=True))

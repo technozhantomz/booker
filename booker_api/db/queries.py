@@ -4,6 +4,7 @@ from sqlalchemy.sql import insert, delete, update, select, join
 import sqlalchemy as sa
 from booker_api.db.models import Tx, Order
 from finteh_proto.enums import OrderType, TxError
+from finteh_proto.dto import OrderDTO, TransactionDTO
 from finteh_proto.utils import object_as_dict, get_logger
 
 
@@ -21,12 +22,12 @@ async def insert_tx(conn: SAConn, tx: Tx) -> bool:
 
 async def update_tx(conn: SAConn, tx: Tx):
     _tx = object_as_dict(tx)
-    q = update(Tx).values(**_tx).where(Tx.tx_id == tx.tx_id)
+    q = update(Tx).values(**_tx).where(Tx.id == tx.id)
     return await conn.execute(q)
 
 
 async def delete_tx(conn: SAConn, tx_id) -> None:
-    await conn.execute(delete(Tx).where(Tx.tx_id == tx_id))
+    await conn.execute(delete(Tx).where(Tx.id == tx_id))
 
 
 async def insert_order(conn: SAConn, order: Order):
@@ -36,6 +37,43 @@ async def insert_order(conn: SAConn, order: Order):
         return True
     except Exception as ex:
         return False
+
+
+async def safe_update_order(conn: SAConn, order: OrderDTO):
+    async with conn.begin("SERIALIZABLE") as transaction:
+        cursor = await conn.execute(
+            select([Order]).where(Order.id == order.order_id).as_scalar()
+        )
+        _db_order_instance = await cursor.fetchone()
+
+        _txs_to_update = []
+
+        for tx in (order.in_tx, order.out_tx):
+            if tx is None:
+                continue
+
+            if tx == order.in_tx:
+                tx_uuid = _db_order_instance.in_tx
+            elif tx == order.out_tx:
+                tx_uuid = _db_order_instance.out_tx
+            else:
+                raise
+
+            _tx = Tx(
+                id=tx_uuid,
+                coin=tx.coin,
+                tx_id=tx.tx_id,
+                from_address=tx.from_address,
+                to_address=tx.to_address,
+                amount=tx.amount,
+                created_at=tx.created_at,
+                error=tx.error,
+                confirmations=tx.confirmations,
+                max_confirmations=tx.max_confirmations,
+            )
+
+            await update_tx(conn, _tx)
+        return True
 
 
 async def safe_insert_order(conn: SAConn, in_tx: Tx, out_tx: Tx, order: Order):

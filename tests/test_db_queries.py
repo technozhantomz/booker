@@ -4,7 +4,6 @@ import datetime
 from uuid import uuid4
 from booker_api.config import Config
 from booker_api.db.queries import *
-from booker_api.db.queries import get_tx_by_tx_id
 from finteh_proto.enums import TxError, OrderType
 
 
@@ -45,7 +44,7 @@ async def test_insert_tx():
             tx_from_db = await r.fetchone()
             error = tx_from_db["error"]
             assert type(error) == TxError
-            await delete_tx(conn, tx.tx_id)
+            await delete_tx(conn, tx.id)
 
     except Exception as ex:
         pytest.skip(
@@ -96,8 +95,8 @@ async def test_update_tx():
             updated = await get_tx_by_tx_id(conn, tx.tx_id)
 
             await delete_order(conn, order.id)
-            await delete_tx(conn, tx.tx_id)
-            await delete_tx(conn, out_tx.tx_id)
+            await delete_tx(conn, tx.id)
+            await delete_tx(conn, out_tx.id)
 
             assert updated["confirmations"] == 10
 
@@ -154,13 +153,97 @@ async def test_insert_order():
 
             r = await delete_order(conn, order.id)
             if r:
-                await delete_tx(conn, in_tx.tx_id)
-                await delete_tx(conn, out_tx.tx_id)
+                await delete_tx(conn, in_tx.id)
+                await delete_tx(conn, out_tx.id)
 
     except Exception as ex:
         pytest.skip(
             msg=f"Bad database connection: {ex}\nmaybe database bad config or not started?"
         )
+
+
+@pytest.mark.asyncio
+async def test_update_order():
+    from finteh_proto.dto import OrderDTO, TransactionDTO
+
+    engine = await _get_db_engine()
+
+    async with engine.acquire() as conn:
+        in_tx1 = Tx(
+            id=uuid4(),
+            coin="USDT",
+            tx_id="some_id11",
+            from_address="some_sender",
+            to_address="some_receiver",
+            amount=10.1,
+            created_at=datetime.datetime.now(),
+            error=TxError.NO_ERROR,
+            confirmations=4,
+            max_confirmations=3,
+        )
+
+        out_tx1 = Tx(
+            id=uuid4(),
+            coin="FINTEH.USDT",
+            tx_id="some_id2",
+            from_address="some_sender",
+            to_address="some_receiver",
+            amount=9.99,
+            created_at=datetime.datetime.now(),
+            error=TxError.NO_ERROR,
+            confirmations=3,
+            max_confirmations=3,
+        )
+
+        order1 = Order(
+            id=uuid4(), in_tx=in_tx1.id, out_tx=out_tx1.id, order_type=OrderType.DEPOSIT
+        )
+
+        await safe_insert_order(conn, in_tx1, out_tx1, order1)
+
+        in_tx_dto = TransactionDTO(
+            coin=in_tx1.coin,
+            tx_id=in_tx1.tx_id,
+            from_address=in_tx1.from_address,
+            to_address=in_tx1.to_address,
+            amount=in_tx1.amount,
+            created_at=in_tx1.created_at,
+            error=in_tx1.error,
+            confirmations=in_tx1.confirmations,
+            max_confirmations=in_tx1.max_confirmations,
+        )
+
+        out_tx1_dto = TransactionDTO(
+            coin=out_tx1.coin,
+            tx_id=out_tx1.tx_id,
+            from_address=out_tx1.from_address,
+            to_address=out_tx1.to_address,
+            amount=out_tx1.amount,
+            created_at=out_tx1.created_at,
+            error=out_tx1.error,
+            confirmations=out_tx1.confirmations,
+            max_confirmations=out_tx1.max_confirmations,
+        )
+
+        order_dto = OrderDTO(
+            order_id=order1.id,
+            in_tx=None,
+            out_tx=out_tx1_dto,
+            order_type=order1.order_type,
+        )
+
+        order_dto.out_tx.confirmations = 6
+
+        await safe_update_order(conn, order_dto)
+
+        order_db_instance = await select_order_by_id(conn, order1.id)
+
+        assert order_db_instance.out_tx_confirmations == 6
+
+        await delete_order(conn, order1.id)
+
+        await delete_tx(conn, in_tx1.id)
+        await delete_tx(conn, out_tx1.id)
 
 
 @pytest.mark.asyncio
@@ -212,8 +295,8 @@ async def test_select_all_orders():
 
             await delete_order(conn, order.id)
 
-            await delete_tx(conn, in_tx.tx_id)
-            await delete_tx(conn, out_tx.tx_id)
+            await delete_tx(conn, in_tx.id)
+            await delete_tx(conn, out_tx.id)
 
             assert r
 
@@ -338,7 +421,7 @@ async def test_select_orders_to_process():
                 await delete_order(conn, i.id)
 
             for i in (in_tx1, in_tx2, in_tx3, out_tx1, out_tx2, out_tx3):
-                await delete_tx(conn, i.tx_id)
+                await delete_tx(conn, i.id)
 
             assert len(orders_to_process) == 1
             for i in orders_to_process:
@@ -390,8 +473,8 @@ async def test_safe_insert_order():
 
         await delete_order(conn, order1.id)
 
-        await delete_tx(conn, in_tx1.tx_id)
-        await delete_tx(conn, out_tx1.tx_id)
+        await delete_tx(conn, in_tx1.id)
+        await delete_tx(conn, out_tx1.id)
 
         assert r
 
@@ -418,7 +501,7 @@ async def test_get_tx_by_tx_id():
         tx = await get_tx_by_tx_id(conn, in_tx1.tx_id)
         assert tx
 
-        await delete_tx(conn, tx_id=tx.tx_id)
+        await delete_tx(conn, tx_id=tx.id)
 
 
 @pytest.mark.asyncio
@@ -466,8 +549,8 @@ async def test_get_order_by_tx_id():
 
         await delete_order(conn, order1.id)
 
-        await delete_tx(conn, in_tx1.tx_id)
-        await delete_tx(conn, out_tx1.tx_id)
+        await delete_tx(conn, in_tx1.id)
+        await delete_tx(conn, out_tx1.id)
 
         assert order_db_instance
 
