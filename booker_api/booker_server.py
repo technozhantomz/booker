@@ -184,7 +184,9 @@ class BookerServer(BaseServer):
 
         log.info(f"Order {order.id} created")
 
-        in_tx_dto = EmptyTransactionDTO(coin=in_tx.coin, to_address=in_tx.to_address)
+        in_tx_dto = EmptyTransactionDTO(
+            coin=in_tx.coin, to_address=deposit_address.deposit_address
+        )
 
         out_tx_dto = EmptyTransactionDTO(coin=out_tx.coin, to_address=out_tx.to_address)
 
@@ -198,7 +200,7 @@ class BookerServer(BaseServer):
             )
         else:
             log.info(
-                f"Unable to copy order {order_dto.order_id} to native{client_name} gateway: {notify.message}"
+                f"Unable to create copy of empty order {order_dto.order_id} on native{client_name} gateway: {notify.message}"
             )
 
         order_dto = FrontendInOrderDTO(
