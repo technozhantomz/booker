@@ -4,7 +4,11 @@ from sqlalchemy.sql import insert, delete, update, select, join
 import sqlalchemy as sa
 from booker_api.db.models import Tx, Order
 from finteh_proto.enums import OrderType, TxError
-from finteh_proto.utils import object_as_dict
+from finteh_proto.dto import OrderDTO, TransactionDTO
+from finteh_proto.utils import object_as_dict, get_logger
+
+
+log = get_logger("Database Engine")
 
 
 async def insert_tx(conn: SAConn, tx: Tx) -> bool:
@@ -18,12 +22,12 @@ async def insert_tx(conn: SAConn, tx: Tx) -> bool:
 
 async def update_tx(conn: SAConn, tx: Tx):
     _tx = object_as_dict(tx)
-    q = update(Tx).values(**_tx).where(Tx.tx_id == tx.tx_id)
+    q = update(Tx).values(**_tx).where(Tx.id == tx.id)
     return await conn.execute(q)
 
 
 async def delete_tx(conn: SAConn, tx_id) -> None:
-    await conn.execute(delete(Tx).where(Tx.tx_id == tx_id))
+    await conn.execute(delete(Tx).where(Tx.id == tx_id))
 
 
 async def insert_order(conn: SAConn, order: Order):
@@ -33,6 +37,43 @@ async def insert_order(conn: SAConn, order: Order):
         return True
     except Exception as ex:
         return False
+
+
+async def safe_update_order(conn: SAConn, order: OrderDTO):
+    async with conn.begin("SERIALIZABLE") as transaction:
+        cursor = await conn.execute(
+            select([Order]).where(Order.id == order.order_id).as_scalar()
+        )
+        _db_order_instance = await cursor.fetchone()
+
+        _txs_to_update = []
+
+        for tx in (order.in_tx, order.out_tx):
+            if tx is None:
+                continue
+
+            if tx == order.in_tx:
+                tx_uuid = _db_order_instance.in_tx
+            elif tx == order.out_tx:
+                tx_uuid = _db_order_instance.out_tx
+            else:
+                raise
+
+            _tx = Tx(
+                id=tx_uuid,
+                coin=tx.coin,
+                tx_id=tx.tx_id,
+                from_address=tx.from_address,
+                to_address=tx.to_address,
+                amount=tx.amount,
+                created_at=tx.created_at,
+                error=tx.error,
+                confirmations=tx.confirmations,
+                max_confirmations=tx.max_confirmations,
+            )
+
+            await update_tx(conn, _tx)
+        return True
 
 
 async def safe_insert_order(conn: SAConn, in_tx: Tx, out_tx: Tx, order: Order):
@@ -46,6 +87,7 @@ async def safe_insert_order(conn: SAConn, in_tx: Tx, out_tx: Tx, order: Order):
             assert _order_res
             return True
         except Exception as ex:
+            log.info(f"Serialization inserting order {order.id} fail: {ex}")
             return False
 
 
@@ -74,6 +116,7 @@ async def select_orders_to_process(conn: SAConn) -> RowProxy:
         (Order.order_type != OrderType.TRASH)
         & (in_tx.c.error == TxError.NO_ERROR)
         & (in_tx.c.confirmations >= in_tx.c.max_confirmations)
+        & (in_tx.c.max_confirmations > 0)
         & (out_tx.c.tx_id == None)
     )
 
@@ -107,10 +150,10 @@ async def select_orders_to_process(conn: SAConn) -> RowProxy:
         .where(where)
     )
     cursor = await conn.execute(q)
-    subs = await cursor.fetchall()
+    orders = await cursor.fetchall()
 
-    if subs:
-        return subs
+    if orders:
+        return orders
     else:
         return []
 
@@ -118,3 +161,44 @@ async def select_orders_to_process(conn: SAConn) -> RowProxy:
 async def get_tx_by_tx_id(conn, tx_id):
     cursor = await conn.execute(select([Tx]).where(Tx.tx_id == tx_id))
     return await cursor.fetchone()
+
+
+async def select_order_by_id(conn, order_id):
+    in_tx = sa.alias(Tx, name="in_tx")
+    out_tx = sa.alias(Tx, name="out_tx")
+    j_in = join(Order, in_tx, Order.in_tx == in_tx.c.id.label(name="in_tx_id"))
+    j_out = join(j_in, out_tx, Order.out_tx == out_tx.c.id.label(name="out_tx_id"))
+
+    where = Order.id == order_id
+
+    q = (
+        select(
+            [
+                Order.order_type,
+                in_tx.c.coin.label("in_tx_coin"),
+                in_tx.c.tx_id.label("in_tx_hash"),
+                in_tx.c.from_address.label("in_tx_from"),
+                in_tx.c.to_address.label("in_tx_to"),
+                in_tx.c.amount.label("in_tx_amount"),
+                in_tx.c.created_at.label("in_tx_created_at"),
+                in_tx.c.error.label("in_tx_error"),
+                in_tx.c.confirmations.label("in_tx_confirmations"),
+                in_tx.c.max_confirmations.label("in_tx_max_confirmations"),
+                out_tx.c.coin.label("out_tx_coin"),
+                out_tx.c.tx_id.label("out_tx_hash"),
+                out_tx.c.from_address.label("out_tx_from"),
+                out_tx.c.to_address.label("out_tx_to"),
+                out_tx.c.amount.label("out_tx_amount"),
+                out_tx.c.created_at.label("out_tx_created_at"),
+                out_tx.c.error.label("out_tx_error"),
+                out_tx.c.confirmations.label("out_tx_confirmations"),
+                out_tx.c.max_confirmations.label("out_tx_max_confirmations"),
+            ]
+        )
+        .select_from(j_in)
+        .select_from(j_out)
+        .where(where)
+    )
+    cursor = await conn.execute(q)
+    order = await cursor.fetchone()
+    return order
