@@ -60,9 +60,18 @@ class AppContext:
                 if params:
                     gw_client = BookerSideClient(name, side, self, params[0], params[1])
                     self.gateways_clients[name][side] = gw_client
-                    log.info(
-                        f"{side}{name} client created and ready to connect ws://{params[0]}:{params[1]}/"
-                    )
+                    try:
+                        loop.run_until_complete(
+                            gw_client.connect(params[0], params[1], "/ws-rpc")
+                        )
+                        log.info(
+                            f"{side}{name} client created and ready to connect ws://{params[0]}:{params[1]}/ws-rpc"
+                        )
+                        loop.run_until_complete(gw_client.disconnect())
+                    except Exception as ex:
+                        log.warning(
+                            f"{side}{name} created, but unable to connect ws://{params[0]}:{params[1]}/ws-rpc: {ex}"
+                        )
                 else:
                     log.info(f"{side}{name} client not specified")
 

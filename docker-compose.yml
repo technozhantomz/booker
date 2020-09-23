@@ -23,6 +23,8 @@ services:
         interval: 1s
         timeout: 10s
         retries: 100
+      networks:
+        - finteh-network
 
   booker:
     build: .
@@ -38,6 +40,12 @@ services:
       - "${HTTP_PORT}"
     depends_on:
       - postgres
+    networks:
+      - finteh-network
 
 volumes:
   dbdata:
+
+networks:
+  finteh-network:
+    external: true
