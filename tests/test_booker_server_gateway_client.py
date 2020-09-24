@@ -27,7 +27,7 @@ TEST_ORDER = OrderDTO(order_id=uuid4(), in_tx=TEST_TX)
 async def test_booker_server_and_gateway_client():
     server = BookerServer()
     await server.start()
-    client = GatewaySideClient(port=8888)
+    client = GatewaySideClient()
 
     in_tx = TEST_TX
     out_tx = TransactionDTO(to_address="prefix.one")
