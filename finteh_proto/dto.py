@@ -40,8 +40,8 @@ class CreatedEmptyOrderDTO(DataTransferClass):
 
 @dataclass
 class TransactionDTO(DataTransferClass):
-    coin: str
-    amount: Amount
+    coin: str = None
+    amount: Amount = None
     to_address: str = None
     from_address: str = None
     created_at: datetime.datetime = datetime.datetime.now()

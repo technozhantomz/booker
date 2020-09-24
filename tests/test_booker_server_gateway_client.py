@@ -27,13 +27,17 @@ TEST_ORDER = OrderDTO(order_id=uuid4(), in_tx=TEST_TX)
 async def test_booker_server_and_gateway_client():
     server = BookerServer()
     await server.start()
-    client = GatewaySideClient()
+    client = GatewaySideClient(port=8888)
 
     in_tx = TEST_TX
+    out_tx = TransactionDTO(to_address="prefix.one")
 
-    created_order = await client.create_order_request(in_tx)
+    order_to_create_dto = OrderDTO(in_tx=in_tx, out_tx=out_tx)
+
+    created_order = await client.create_order_request(order_to_create_dto)
 
     assert isinstance(created_order, OrderDTO)
+    assert created_order.order_id
     assert isinstance(created_order.in_tx, TransactionDTO)
     assert isinstance(created_order.in_tx.error, TxError)
     assert isinstance(created_order.in_tx.amount, Decimal)
