@@ -26,15 +26,9 @@ def upgrade():
         sa.Column("tx_id", sa.String(), nullable=True),
         sa.Column("from_address", sa.String(), nullable=True),
         sa.Column("to_address", sa.String(), nullable=True),
+        sa.Column("amount", sa.Numeric(precision=78, scale=36), server_default="0.0"),
         sa.Column(
-            "amount",
-            sa.Numeric(precision=78, scale=36),
-            server_default="0.0",
-        ),
-        sa.Column(
-            "created_at",
-            sa.DateTime(),
-            server_default=sa.text("CURRENT_TIMESTAMP"),
+            "created_at", sa.DateTime(), server_default=sa.text("CURRENT_TIMESTAMP")
         ),
         sa.Column(
             "error",
@@ -42,9 +36,7 @@ def upgrade():
             server_default="NO_ERROR",
         ),
         sa.Column("confirmations", sa.Integer(), server_default="0"),
-        sa.Column(
-            "max_confirmations", sa.Integer(), server_default="0"
-        ),
+        sa.Column("max_confirmations", sa.Integer(), server_default="0"),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("coin", "tx_id"),
     )

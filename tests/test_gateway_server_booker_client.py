@@ -90,9 +90,7 @@ async def test_booker_client_init_new_tx():
     await server.start()
     client = BookerSideClient()
 
-    TEST_ORDER.out_tx = TransactionDTO(
-        to_address="Some address666"
-    )
+    TEST_ORDER.out_tx = TransactionDTO(to_address="Some address666")
 
     out_tx = await client.init_new_tx_request(TEST_ORDER)
 

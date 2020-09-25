@@ -68,10 +68,14 @@ class OrdersProcessor:
                     so NATIVE (for example Ethereum ERC-20 USDT) blockchain
                     needs to process OUT transaction """
                     if row.order_type == OrderType.WITHDRAWAL:
-                        gw = self.ctx.gateways_clients[_in_coin.replace(f"{self.ctx.cfg.exchange_prefix}.", "")]["native"]
+                        gw = self.ctx.gateways_clients[
+                            _in_coin.replace(f"{self.ctx.cfg.exchange_prefix}.", "")
+                        ]["native"]
 
                     if gw:
-                        log.info(f"Try {gw} initialize out transaction for {order.order_id}...")
+                        log.info(
+                            f"Try {gw} initialize out transaction for {order.order_id}..."
+                        )
 
                         new_tx = await gw.init_new_tx_request(order)
 
