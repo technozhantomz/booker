@@ -76,7 +76,11 @@ class BookerServer(BaseServer):
                     out_tx=out_tx_model.id,
                     order_type=order_dto.order_type,
                 )
-                await safe_insert_order(conn, in_tx_model, out_tx_model, order_model)
+                insert = await safe_insert_order(
+                    conn, in_tx_model, out_tx_model, order_model
+                )
+
+                log.info(f"Order {order_model.id} created: {insert}")
 
         return self.jsonrpc_response(request, order_dto)
 
@@ -86,7 +90,8 @@ class BookerServer(BaseServer):
 
         if self.ctx:
             async with self.ctx.db_engine.acquire() as conn:
-                await safe_update_order(conn, order_dto)
+                update = await safe_update_order(conn, order_dto)
+                log.info(f"Order {order_dto.order_id} updated: {update}")
 
         updated_tx = UpdateOrderDTO(is_updated=True)
 

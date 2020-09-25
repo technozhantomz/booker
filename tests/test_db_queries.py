@@ -201,21 +201,8 @@ async def test_update_order():
 
         await safe_insert_order(conn, in_tx1, out_tx1, order1)
 
-        in_tx_dto = TransactionDTO(
-            coin=in_tx1.coin,
-            tx_id=in_tx1.tx_id,
-            from_address=in_tx1.from_address,
-            to_address=in_tx1.to_address,
-            amount=in_tx1.amount,
-            created_at=in_tx1.created_at,
-            error=in_tx1.error,
-            confirmations=in_tx1.confirmations,
-            max_confirmations=in_tx1.max_confirmations,
-        )
-
         out_tx1_dto = TransactionDTO(
             coin=out_tx1.coin,
-            tx_id=out_tx1.tx_id,
             from_address=out_tx1.from_address,
             to_address=out_tx1.to_address,
             amount=out_tx1.amount,
@@ -239,6 +226,7 @@ async def test_update_order():
         order_db_instance = await select_order_by_id(conn, order1.id)
 
         assert order_db_instance.out_tx_confirmations == 6
+        assert order_db_instance.in_tx_hash != None
 
         await delete_order(conn, order1.id)
 
