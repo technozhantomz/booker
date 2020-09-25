@@ -90,7 +90,6 @@ async def test_jsonrpc_client_error():
     )
 
     r = await c.test_client_side_error(start_dto)
-    print(r)
     assert isinstance(r, JSONRPCError)
     assert r.message == "division by zero"
 

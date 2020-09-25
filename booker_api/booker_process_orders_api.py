@@ -1,6 +1,6 @@
 import asyncio
 from finteh_proto.utils import get_logger
-from booker_api.db.queries import select_orders_to_process
+from booker_api.db.queries import select_orders_to_process, safe_update_order
 from finteh_proto.dto import TransactionDTO, OrderDTO
 
 from finteh_proto.enums import OrderType
@@ -54,23 +54,33 @@ class OrdersProcessor:
                 _orders = await select_orders_to_process(conn)
                 for row in _orders:
 
+                    _in_coin = row["in_tx_coin"]
                     order = order_from_row(row)
 
                     """ If order_type is DEPOSIT, it means that IN transaction
                     was completed in NATIVE (for example Ethereum ERC-20 USDT) blockchain,
                     so TARGET (for example bitshares FINTEH.USDT) blockchain needs to process OUT transaction """
                     if order.order_type == OrderType.DEPOSIT:
-                        gw = self.ctx.gateways_clients[row["in_tx_coin"]]["target"]
+                        gw = self.ctx.gateways_clients[_in_coin]["target"]
 
                     """ If order_type is WITHDRAWAL, it means that IN transaction
                     was completed in TARGET (for example bitshares FINTEH.USDT) blockchain,
                     so NATIVE (for example Ethereum ERC-20 USDT) blockchain
                     needs to process OUT transaction """
                     if row.order_type == OrderType.WITHDRAWAL:
-                        gw = self.ctx.gateways_clients[row["in_tx_coin"]]["native"]
+                        gw = self.ctx.gateways_clients[_in_coin.replace(f"{self.ctx.cfg.exchange_prefix}.", "")]["native"]
 
                     if gw:
-                        log.info(f"{gw}  processing order {order.order_id} starting...")
-                        new_tx = await gw.init_new_tx_request(row)
+                        log.info(f"Try {gw} initialize out transaction for {order.order_id}...")
+
+                        new_tx = await gw.init_new_tx_request(order)
+
+                        if hasattr(new_tx, "order_id"):
+                            order.out_tx.max_confirmations = new_tx.max_confirmations
+                            order.out_tx.from_address = new_tx.from_address
+
+                            await safe_update_order(conn, order)
+                        else:
+                            log.info(f"Unable to init new transaction: {new_tx}")
 
             await asyncio.sleep(1)
