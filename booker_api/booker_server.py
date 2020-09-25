@@ -46,48 +46,43 @@ class BookerServer(BaseServer):
         self.add_methods(("", self.create_order), ("", self.update_order))
 
     async def create_order(self, request):
-        """Receiving new (IN) transaction, creating OUT transaction template and Order"""
-        in_tx = TransactionDTO.Schema().load(request.msg[1]["params"])
+        """Receiving Order with new (IN) transaction, creating OUT transaction template and Order_id"""
+        order_dto = OrderDTO.Schema().load(request.msg[1]["params"])
 
-        # TODO replace this mock
-        out_tx = TransactionDTO(
-            amount=in_tx.amount,
-            tx_id=None,
-            coin=in_tx.coin,
-            to_address=in_tx.coin,
-            from_address=in_tx.coin,
-            confirmations=0,
-            max_confirmations=1,
-            created_at=datetime.datetime.now(),
-        )
+        # TODO take_fee
+        order_dto.out_tx.amount = order_dto.in_tx.amount
 
         if self.ctx:
             prefix = self.ctx.cfg.exchange_prefix
         else:
             prefix = Config.exchange_prefix
 
-        if prefix in in_tx.coin:
-            order_type = OrderType.WITHDRAWAL
+        if prefix in order_dto.in_tx.coin:
+            order_dto.order_type = OrderType.WITHDRAWAL
+            order_dto.out_tx.coin = str(order_dto.in_tx.coin).replace(f"{prefix}.", "")
         else:
-            order_type = OrderType.DEPOSIT
+            order_dto.order_type = OrderType.DEPOSIT
+            order_dto.out_tx.coin = f"{prefix}.{order_dto.in_tx.coin}"
 
-        order = OrderDTO(
-            order_id=uuid4(), in_tx=in_tx, out_tx=out_tx, order_type=order_type
-        )
+        order_dto.order_id = uuid4()
 
         if self.ctx:
             async with self.ctx.db_engine.acquire() as conn:
-                in_tx_model = Tx(id=uuid4(), **dataclasses.asdict(in_tx))
-                out_tx_model = Tx(id=uuid4(), **dataclasses.asdict(out_tx))
+                in_tx_model = Tx(id=uuid4(), **dataclasses.asdict(order_dto.in_tx))
+                out_tx_model = Tx(id=uuid4(), **dataclasses.asdict(order_dto.out_tx))
                 order_model = Order(
-                    id=order.order_id,
+                    id=order_dto.order_id,
                     in_tx=in_tx_model.id,
                     out_tx=out_tx_model.id,
-                    order_type=order.order_type,
+                    order_type=order_dto.order_type,
                 )
-                await safe_insert_order(conn, in_tx_model, out_tx_model, order_model)
+                insert = await safe_insert_order(
+                    conn, in_tx_model, out_tx_model, order_model
+                )
 
-        return self.jsonrpc_response(request, order)
+                log.info(f"Order {order_model.id} created: {insert}")
+
+        return self.jsonrpc_response(request, order_dto)
 
     async def update_order(self, request):
         """Update existing transaction"""
@@ -95,7 +90,8 @@ class BookerServer(BaseServer):
 
         if self.ctx:
             async with self.ctx.db_engine.acquire() as conn:
-                await safe_update_order(conn, order_dto)
+                update = await safe_update_order(conn, order_dto)
+                log.info(f"Order {order_dto.order_id} updated: {update}")
 
         updated_tx = UpdateOrderDTO(is_updated=True)
 
@@ -184,7 +180,9 @@ class BookerServer(BaseServer):
 
         log.info(f"Order {order.id} created")
 
-        in_tx_dto = EmptyTransactionDTO(coin=in_tx.coin, to_address=in_tx.to_address)
+        in_tx_dto = EmptyTransactionDTO(
+            coin=in_tx.coin, to_address=deposit_address.deposit_address
+        )
 
         out_tx_dto = EmptyTransactionDTO(coin=out_tx.coin, to_address=out_tx.to_address)
 
@@ -198,7 +196,7 @@ class BookerServer(BaseServer):
             )
         else:
             log.info(
-                f"Unable to copy order {order_dto.order_id} to native{client_name} gateway: {notify.message}"
+                f"Unable to create copy of empty order {order_dto.order_id} on native{client_name} gateway: {notify.message}"
             )
 
         order_dto = FrontendInOrderDTO(

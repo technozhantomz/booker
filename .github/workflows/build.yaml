@@ -19,6 +19,9 @@ jobs:
       - name: Create gateways config
         run: cp gateways.yml.example gateways.yml
 
+      - name: Create network
+        run: docker network create finteh-network
+
       - name: Run postgres container
         run: docker-compose run -d postgres
 

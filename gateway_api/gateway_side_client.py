@@ -10,12 +10,12 @@ class GatewaySideClient(BaseClient):
         super().__init__(ctx, host, port)
 
     @BaseClient.safe_call_execute
-    async def create_order_request(self, tx: TransactionDTO) -> tuple:
+    async def create_order_request(self, order: OrderDTO) -> tuple:
         """Requesting remote Booker instance to create new order.
         When gateway see new valid transaction in blockchain, it send notifications with tx params.
         Booker will response with just-created Order with id
         Require valid transaction that will become in_tx in returned order"""
-        return "create_order", tx, OrderDTO
+        return "create_order", order, OrderDTO
 
     @BaseClient.safe_call_execute
     async def update_order_request(self, order: OrderDTO) -> tuple:

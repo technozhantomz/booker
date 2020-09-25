@@ -1,7 +1,10 @@
+import dataclasses
+
 from aiopg.sa import SAConnection as SAConn
 from aiopg.sa.result import RowProxy
 from sqlalchemy.sql import insert, delete, update, select, join
 import sqlalchemy as sa
+
 from booker_api.db.models import Tx, Order
 from finteh_proto.enums import OrderType, TxError
 from finteh_proto.dto import OrderDTO, TransactionDTO
@@ -21,7 +24,10 @@ async def insert_tx(conn: SAConn, tx: Tx) -> bool:
 
 
 async def update_tx(conn: SAConn, tx: Tx):
-    _tx = object_as_dict(tx)
+    _tx = {}
+    for k, v in object_as_dict(tx).items():
+        if v != None:
+            _tx[k] = v
     q = update(Tx).values(**_tx).where(Tx.id == tx.id)
     return await conn.execute(q)
 
@@ -46,11 +52,9 @@ async def safe_update_order(conn: SAConn, order: OrderDTO):
         )
         _db_order_instance = await cursor.fetchone()
 
-        _txs_to_update = []
+        _txs_to_update = [tx for tx in (order.in_tx, order.out_tx) if tx is not None]
 
-        for tx in (order.in_tx, order.out_tx):
-            if tx is None:
-                continue
+        for tx in _txs_to_update:
 
             if tx == order.in_tx:
                 tx_uuid = _db_order_instance.in_tx
@@ -59,18 +63,7 @@ async def safe_update_order(conn: SAConn, order: OrderDTO):
             else:
                 raise
 
-            _tx = Tx(
-                id=tx_uuid,
-                coin=tx.coin,
-                tx_id=tx.tx_id,
-                from_address=tx.from_address,
-                to_address=tx.to_address,
-                amount=tx.amount,
-                created_at=tx.created_at,
-                error=tx.error,
-                confirmations=tx.confirmations,
-                max_confirmations=tx.max_confirmations,
-            )
+            _tx = Tx(id=tx_uuid, **dataclasses.asdict(tx))
 
             await update_tx(conn, _tx)
         return True
