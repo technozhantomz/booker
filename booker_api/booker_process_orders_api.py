@@ -79,12 +79,12 @@ class OrdersProcessor:
 
                         new_tx = await gw.init_new_tx_request(order)
 
-                        if hasattr(new_tx, "order_id"):
+                        try:
                             order.out_tx.max_confirmations = new_tx.max_confirmations
                             order.out_tx.from_address = new_tx.from_address
 
                             await safe_update_order(conn, order)
-                        else:
-                            log.info(f"Unable to init new transaction: {new_tx}")
+                        except Exception as ex:
+                            log.info(f"Unable to init new transaction: {new_tx}, {ex}")
 
             await asyncio.sleep(1)
