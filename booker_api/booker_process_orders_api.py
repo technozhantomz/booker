@@ -52,6 +52,7 @@ class OrdersProcessor:
         while True:
             async with self.ctx.db_engine.acquire() as conn:
                 _orders = await select_orders_to_process(conn)
+
                 for row in _orders:
 
                     _in_coin = row["in_tx_coin"]
@@ -79,7 +80,13 @@ class OrdersProcessor:
 
                         new_tx = await gw.init_new_tx_request(order)
 
+                        """Gateway must response with TransactionDTO filled max_confirmations and from_address params.
+                         It's a signal that gateway ready to execute new transaction
+                         """
+                        # TODO validate field
                         try:
+                            assert new_tx.max_confirmations > 0
+                            assert new_tx.from_address is not None
                             order.out_tx.max_confirmations = new_tx.max_confirmations
                             order.out_tx.from_address = new_tx.from_address
 
