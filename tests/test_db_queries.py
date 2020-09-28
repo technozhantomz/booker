@@ -117,7 +117,7 @@ async def test_insert_order():
                 tx_id="some_id1",
                 from_address="some_sender",
                 to_address="some_receiver",
-                amount=10.1,
+                amount=1.1,
                 created_at=datetime.datetime.now(),
                 error=TxError.NO_ERROR,
                 confirmations=1,
@@ -128,15 +128,14 @@ async def test_insert_order():
 
             out_tx = Tx(
                 id=uuid4(),
-                coin="FINTEH.USDT",
-                # tx_id="some_id2",
+                coin="FINTEHTEST.USDT",
                 from_address="some_sender",
-                to_address="some_receiver",
-                amount=9.99,
+                to_address="fincubator-user-test1",
+                amount=0.99,
                 created_at=datetime.datetime.now(),
                 error=TxError.NO_ERROR,
                 confirmations=0,
-                max_confirmations=1,
+                max_confirmations=0,
             )
 
             await insert_tx(conn, out_tx)
@@ -375,7 +374,7 @@ async def test_select_orders_to_process():
                 created_at=datetime.datetime.now(),
                 error=TxError.NO_ERROR,
                 confirmations=0,
-                max_confirmations=3,
+                max_confirmations=0,
             )
 
             for i in (in_tx1, in_tx2, in_tx3, out_tx1, out_tx2, out_tx3):

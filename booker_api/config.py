@@ -9,7 +9,7 @@ project_root_dir = Path(__file__).parent.parent
 
 
 class Config:
-    exchange_prefix = "FINTEH"
+    exchange_prefix = "FINTEHTEST"
 
     db_driver: str = "postgres+psycopg2"
     db_host: str = "0.0.0.0"

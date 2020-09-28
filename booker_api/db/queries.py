@@ -111,6 +111,7 @@ async def select_orders_to_process(conn: SAConn) -> RowProxy:
         & (in_tx.c.confirmations >= in_tx.c.max_confirmations)
         & (in_tx.c.max_confirmations > 0)
         & (out_tx.c.tx_id == None)
+        & (out_tx.c.max_confirmations == 0)
     )
 
     q = (

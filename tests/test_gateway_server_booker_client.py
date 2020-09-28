@@ -66,7 +66,6 @@ async def test_booker_client_deposit_address():
 
     assert isinstance(deposit_address, DepositAddressDTO)
     assert deposit_address.deposit_address == "DEPOSIT ADDRESS"
-    print(deposit_address.deposit_address)
     await server.stop()
 
 
@@ -91,7 +90,8 @@ async def test_booker_client_init_new_tx():
     await server.start()
     client = BookerSideClient()
 
-    assert not TEST_ORDER.out_tx
+    TEST_ORDER.out_tx = TransactionDTO(to_address="Some address666")
+
     out_tx = await client.init_new_tx_request(TEST_ORDER)
 
     assert isinstance(out_tx, TransactionDTO)

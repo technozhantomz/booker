@@ -105,8 +105,3 @@ def test_frontend_dto():
     }
 
     new_in_order = NewInOrder(**new_in_order_data)
-
-
-def test_dict():
-    for k, v in dataclasses.asdict(TEST_TX).items():
-        print(k, v)
