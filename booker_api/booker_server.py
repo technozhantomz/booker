@@ -149,7 +149,7 @@ class BookerServer(BaseServer):
         in_tx = Tx(
             id=uuid4(),
             coin=new_order.in_tx_coin,
-            to_address=new_order.out_tx_to,
+            to_address=deposit_address.deposit_address,
             amount=new_order.in_tx_amount,
             created_at=datetime.datetime.now(),
             error=TxError.NO_ERROR,
