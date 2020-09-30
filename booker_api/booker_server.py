@@ -49,7 +49,6 @@ class BookerServer(BaseServer):
         """Receiving Order with new (IN) transaction, creating OUT transaction template and Order_id"""
         order_dto = OrderDTO.Schema().load(request.msg[1]["params"])
 
-        # TODO take_fee
         order_dto.out_tx.amount = order_dto.in_tx.amount
 
         if self.ctx:
