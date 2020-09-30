@@ -9,6 +9,10 @@ from aiohttp.web import (
 from aiohttp_json_rpc import JsonRpc
 from aiohttp_json_rpc.communicaton import JsonRpcRequest
 from finteh_proto.dto import JSONRPCResponse
+from finteh_proto.utils import get_logger
+
+
+log = get_logger("JsonRpcServer")
 
 
 class BaseServer(JsonRpc):
@@ -58,4 +62,5 @@ class BaseServer(JsonRpc):
             id=request.msg[1]["id"], result=result.Schema().dump(result), error=error
         )
         dump = JSONRPCResponse.Schema().dump(response)
+        log.info(f"Sending response ==> {dump}")
         return dump
